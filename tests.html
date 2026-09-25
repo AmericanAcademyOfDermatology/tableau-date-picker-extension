@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Date Range Picker — boundary tests</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body { background: #f6f8fa; padding: 24px; height: auto; }
+    main { max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    .lede { color: var(--drp-ink-muted); margin: 0 0 18px; line-height: 1.6; }
+    .tally {
+      font-size: 15px; font-weight: 600; padding: 10px 14px; border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    .tally--pass { background: #e6f6ee; color: var(--drp-ok); border: 1px solid #b7e3cc; }
+    .tally--fail { background: #fdeceb; color: var(--drp-danger); border: 1px solid #f3c2bf; }
+    table { border-collapse: collapse; width: 100%; background: #fff;
+            border: 1px solid var(--drp-border); border-radius: 6px; overflow: hidden; }
+    th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--drp-border);
+             font-size: 12px; vertical-align: top; }
+    th { background: var(--drp-surface-alt); font-size: 11px; text-transform: uppercase;
+         letter-spacing: 0.05em; color: var(--drp-ink-faint); }
+    tr:last-child td { border-bottom: 0; }
+    td.res { width: 54px; font-weight: 700; }
+    .pass { color: var(--drp-ok); }
+    .fail { color: var(--drp-danger); }
+    td.detail { font-family: Consolas, Menlo, monospace; color: var(--drp-ink-muted); }
+    h2 { font-size: 13px; margin: 22px 0 8px; }
+    .callout { background: #fff; border: 1px solid var(--drp-border);
+               border-left: 3px solid var(--drp-accent); border-radius: 6px;
+               padding: 12px 14px; margin-bottom: 18px; line-height: 1.6; font-size: 13px; }
+    code { font-family: Consolas, Menlo, monospace; background: var(--drp-surface-alt);
+           padding: 0 4px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Boundary tests</h1>
+  <p class="lede">
+    Open this file in any browser. It exercises the calendar-day arithmetic and,
+    most importantly, the rule that decides the upper bound of the range filter.
+  </p>
+
+  <div id="tally" class="tally">Running…</div>
+
+  <div class="callout" id="tzCallout"></div>
+
+  <div id="results"></div>
+</main>
+
+<script src="js/dateutil.js"></script>
+<script src="js/presets.js"></script>
+<script>
+(function () {
+  'use strict';
+  var D = window.DRP.date;
+  var P = window.DRP.presets;
+
+  var groups = [];
+  var current = null;
+  var passed = 0, failed = 0;
+
+  function group(name) { current = { name: name, rows: [] }; groups.push(current); }
+
+  function check(name, actual, expected) {
+    var a = String(actual), e = String(expected);
+    var ok = a === e;
+    ok ? passed++ : failed++;
+    current.rows.push({ name: name, ok: ok, actual: a, expected: e });
+  }
+
+  function iso(d) { return d.toISOString(); }
+
+  /* ------------------------------------------------- calendar arithmetic */
+
+  group('Calendar-day arithmetic');
+  check('addDays across a month end', D.toISO(D.addDays(D.civil(2026, 1, 31), 1)), '2026-02-01');
+  check('addDays across a year end', D.toISO(D.addDays(D.civil(2026, 12, 31), 1)), '2027-01-01');
+  check('addMonths clamps Jan 31 to Feb', D.toISO(D.addMonths(D.civil(2026, 1, 31), 1)), '2026-02-28');
+  check('addMonths into a leap February', D.toISO(D.addMonths(D.civil(2024, 1, 31), 1)), '2024-02-29');
+  check('addMonths backwards over a year edge', D.toISO(D.addMonths(D.civil(2026, 1, 15), -1)), '2025-12-15');
+  check('February 2024 has 29 days', D.daysInMonth(2024, 2), 29);
+  check('February 2026 has 28 days', D.daysInMonth(2026, 2), 28);
+  check('February 1900 had 28 days', D.daysInMonth(1900, 2), 28);
+  check('February 2000 had 29 days', D.daysInMonth(2000, 2), 29);
+  check('diffDays is inclusive-exclusive', D.diffDays(D.civil(2026, 9, 1), D.civil(2026, 9, 24)), 23);
+  check('endOfMonth in a leap year', D.toISO(D.endOfMonth(D.civil(2024, 2, 5))), '2024-02-29');
+  check('startOfQuarter for September', D.toISO(D.startOfQuarter(D.civil(2026, 9, 24))), '2026-07-01');
+  check('endOfQuarter for September', D.toISO(D.endOfQuarter(D.civil(2026, 9, 24))), '2026-09-30');
+  check('24 Sep 2026 is a Thursday', D.DAY_NAMES[D.dayOfWeek(D.civil(2026, 9, 24))], 'Thursday');
+  check('startOfWeek, Sunday start', D.toISO(D.startOfWeek(D.civil(2026, 9, 24), 0)), '2026-09-20');
+  check('startOfWeek, Monday start', D.toISO(D.startOfWeek(D.civil(2026, 9, 24), 1)), '2026-09-21');
+  check('rejects 31 February', D.fromISO('2026-02-31'), 'null');
+  check('rejects month 13', D.fromISO('2026-13-01'), 'null');
+  check('accepts 29 Feb in a leap year', D.toISO(D.fromISO('2024-02-29')), '2024-02-29');
+
+  group('Text entry');
+  check('ISO input', D.toISO(D.parseFlexible('2026-09-24', 'iso')), '2026-09-24');
+  check('US ordering', D.toISO(D.parseFlexible('9/24/2026', 'us')), '2026-09-24');
+  check('European ordering', D.toISO(D.parseFlexible('24/09/2026', 'eu')), '2026-09-24');
+  check('Month name', D.toISO(D.parseFlexible('Sep 24, 2026', 'medium')), '2026-09-24');
+  check('Full month name', D.toISO(D.parseFlexible('24 September 2026', 'medium')), '2026-09-24');
+  check('Two-digit year', D.toISO(D.parseFlexible('9/24/26', 'us')), '2026-09-24');
+  check('Nonsense is rejected', D.parseFlexible('next tuesday', 'us'), 'null');
+
+  /* -------------------------------------------------- the boundary rules */
+
+  group('End-of-range boundary — the fix');
+  var start = D.civil(2026, 9, 1);
+  var end = D.civil(2026, 9, 24);
+
+  var dateBounds = D.boundsFor(start, end, 'midnight');
+  check('date field: min is the start day at UTC midnight',
+    iso(dateBounds.min), '2026-09-01T00:00:00.000Z');
+  check('date field: max is the end day at UTC midnight',
+    iso(dateBounds.max), '2026-09-24T00:00:00.000Z');
+  check('date field: max is strictly before 25 Sep',
+    dateBounds.max.getTime() < Date.UTC(2026, 8, 25), 'true');
+
+  var dtBounds = D.boundsFor(start, end, 'endOfDay');
+  check('datetime field: max covers the last millisecond of the end day',
+    iso(dtBounds.max), '2026-09-24T23:59:59.999Z');
+  check('datetime field: max is strictly before 25 Sep 00:00Z',
+    dtBounds.max.getTime() < Date.UTC(2026, 8, 25), 'true');
+  check('datetime field: max includes 24 Sep 23:59:59Z',
+    dtBounds.max.getTime() >= Date.UTC(2026, 8, 24, 23, 59, 59), 'true');
+
+  check('reversed input is normalised, not rejected',
+    iso(D.boundsFor(end, start, 'endOfDay').min), '2026-09-01T00:00:00.000Z');
+  check('single-day range, date field',
+    iso(D.boundsFor(end, end, 'midnight').max), '2026-09-24T00:00:00.000Z');
+  check('single-day range, datetime field',
+    iso(D.boundsFor(end, end, 'endOfDay').min) + ' .. ' + iso(D.boundsFor(end, end, 'endOfDay').max),
+    '2026-09-24T00:00:00.000Z .. 2026-09-24T23:59:59.999Z');
+
+  group('Boundaries do not move with the local clock');
+  // Date.UTC ignores the host timezone entirely, so the UTC wall time of the
+  // bound is fixed no matter where the workbook is opened.
+  var b = D.boundsFor(D.civil(2026, 3, 8), D.civil(2026, 3, 8), 'endOfDay');
+  check('US spring-forward day keeps a 24-hour span',
+    Math.round((b.max.getTime() - b.min.getTime() + 1) / 3600000), 24);
+  var b2 = D.boundsFor(D.civil(2026, 11, 1), D.civil(2026, 11, 1), 'endOfDay');
+  check('US fall-back day keeps a 24-hour span',
+    Math.round((b2.max.getTime() - b2.min.getTime() + 1) / 3600000), 24);
+  check('the UTC date of the bound equals the day clicked',
+    dtBounds.max.getUTCFullYear() + '-' + (dtBounds.max.getUTCMonth() + 1) + '-' + dtBounds.max.getUTCDate(),
+    '2026-9-24');
+  check('round trip through fromUtcDate',
+    D.toISO(D.fromUtcDate(dtBounds.max)), '2026-09-24');
+
+  group('Presets');
+  var opts = { today: D.civil(2026, 9, 24), weekStart: 0 };
+  function pr(id) { var r = P.resolve(id, opts); return D.toISO(r.start) + '..' + D.toISO(r.end); }
+  check('Today', pr('today'), '2026-09-24..2026-09-24');
+  check('Yesterday', pr('yesterday'), '2026-09-23..2026-09-23');
+  check('Last 7 days includes today', pr('last7'), '2026-09-18..2026-09-24');
+  check('Last 30 days includes today', pr('last30'), '2026-08-26..2026-09-24');
+  check('This month to date', pr('thisMonth'), '2026-09-01..2026-09-24');
+  check('Last month is whole', pr('lastMonth'), '2026-08-01..2026-08-31');
+  check('This quarter to date', pr('thisQuarter'), '2026-07-01..2026-09-24');
+  check('Last quarter is whole', pr('lastQuarter'), '2026-04-01..2026-06-30');
+  check('Year to date', pr('ytd'), '2026-01-01..2026-09-24');
+  check('Last year is whole', pr('lastYear'), '2025-01-01..2025-12-31');
+  check('Preset round-trips through match',
+    P.match(D.civil(2026, 9, 18), D.civil(2026, 9, 24), opts), 'last7');
+  check('Bounds clamp a preset',
+    (function () {
+      var r = P.resolve('last30', { today: D.civil(2026, 9, 24), min: D.civil(2026, 9, 10) });
+      return D.toISO(r.start) + '..' + D.toISO(r.end);
+    })(), '2026-09-10..2026-09-24');
+
+  /* ------------------------------------------------------------- render */
+
+  var tally = document.getElementById('tally');
+  tally.textContent = passed + ' passed, ' + failed + ' failed';
+  tally.className = 'tally ' + (failed ? 'tally--fail' : 'tally--pass');
+
+  var out = document.getElementById('results');
+  groups.forEach(function (g) {
+    var h = document.createElement('h2');
+    h.textContent = g.name;
+    out.appendChild(h);
+
+    var table = document.createElement('table');
+    table.innerHTML = '<tr><th>Result</th><th>Check</th><th>Value</th></tr>';
+    g.rows.forEach(function (r) {
+      var tr = document.createElement('tr');
+      var detail = r.ok ? r.actual : 'got ' + r.actual + ' · expected ' + r.expected;
+      tr.innerHTML =
+        '<td class="res ' + (r.ok ? 'pass">PASS' : 'fail">FAIL') + '</td>' +
+        '<td></td><td class="detail"></td>';
+      tr.children[1].textContent = r.name;
+      tr.children[2].textContent = detail;
+      table.appendChild(tr);
+    });
+    out.appendChild(table);
+  });
+
+  /* --------------------------------- the naive approach, for comparison */
+
+  var tz = '';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { tz = 'unknown'; }
+  var offset = -new Date().getTimezoneOffset() / 60;
+
+  // What a picker built on local-time Dates would send for the same click.
+  var naiveEnd = new Date(2026, 8, 24, 23, 59, 59, 999);
+  var leaks = naiveEnd.getTime() >= Date.UTC(2026, 8, 25);
+
+  document.getElementById('tzCallout').innerHTML =
+    'This browser reports <code>' + tz + '</code> (UTC' + (offset >= 0 ? '+' : '') + offset + ').<br>' +
+    'Picking <strong>24 Sep 2026</strong> as the end date and padding it to ' +
+    '<code>23:59:59</code> in <em>local</em> time, the way a naive picker does, ' +
+    'produces <code>' + iso(naiveEnd) + '</code>. ' +
+    (leaks
+      ? '<strong>That instant is on 25 September in UTC, so Tableau pulls in the following day.</strong>'
+      : 'In this particular timezone that instant still lands on 24 September, which is why the bug is invisible to some users and not others.') +
+    '<br>This extension sends <code>' + iso(dtBounds.max) + '</code> instead, built with ' +
+    '<code>Date.UTC</code>, which is the same value in every timezone.';
+})();
+</script>
+</body>
+</html>

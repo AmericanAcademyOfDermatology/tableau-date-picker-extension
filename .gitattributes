@@ -1,0 +1,15 @@
+# Normalise to LF in the repository; Windows checkouts still get CRLF where it
+# matters. Keeps diffs clean when the project is edited on more than one OS.
+* text=auto eol=lf
+
+# Windows script hosts want CRLF.
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# The vendored Tableau library is third-party. Store it byte-for-byte as
+# downloaded so its hash can be checked against Tableau's published copy.
+lib/tableau.extensions.1.latest.js -text
+
+# Binary assets.
+*.png binary
+*.ico binary

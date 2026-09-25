@@ -1,0 +1,22 @@
+# Claude Code session settings — machine-local permissions, not shared state
+.claude/
+
+# Windows shell cruft
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.lnk
+
+# Dropbox metadata, in case this folder is ever synced again
+.dropbox
+.dropbox.attr
+.dropbox.cache/
+
+# Editor scratch
+*.swp
+*~
+.vscode/
+.idea/
+
+# NOTE: lib/tableau.extensions.1.latest.js is deliberately NOT ignored.
+# GitHub Pages serves it to the browser, so it has to be in the repository.

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Date Range Picker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="drp-shell" id="shell">
+
+    <div class="drp-header">
+      <span class="drp-title" id="headerTitle">Date range</span>
+      <span class="drp-nights" id="summary"></span>
+    </div>
+
+    <div class="drp-notice drp-notice--error" id="setupNotice" hidden>
+      <p id="setupNoticeText"></p>
+      <p><button class="drp-btn" type="button" id="setupConfigureBtn">Open configuration</button></p>
+    </div>
+
+    <div class="drp-body" id="body">
+      <div class="drp-presets" id="presets" role="group" aria-label="Preset ranges">
+        <span class="drp-presets__heading">Quick ranges</span>
+      </div>
+
+      <div class="drp-main">
+        <div class="drp-fields">
+          <div class="drp-field">
+            <label class="drp-field__label" for="startInput">Start</label>
+            <input class="drp-field__input" id="startInput" type="text" autocomplete="off" spellcheck="false">
+          </div>
+          <span class="drp-field__arrow" aria-hidden="true">&rarr;</span>
+          <div class="drp-field">
+            <label class="drp-field__label" for="endInput">End</label>
+            <input class="drp-field__input" id="endInput" type="text" autocomplete="off" spellcheck="false">
+          </div>
+          <span class="drp-nights" id="dayCount"></span>
+        </div>
+
+        <div id="calendar"></div>
+      </div>
+    </div>
+
+    <div class="drp-diagnostics drp-diagnostics--hidden" id="diagnostics">
+      <dl>
+        <dt>Selected days</dt><dd id="diagDays">&mdash;</dd>
+        <dt>Sent as min</dt><dd id="diagMin">&mdash;</dd>
+        <dt>Sent as max</dt><dd id="diagMax">&mdash;</dd>
+        <dt>End-bound rule</dt><dd id="diagPolicy">&mdash;</dd>
+        <dt>Read back from Tableau</dt><dd id="diagReadback">&mdash;</dd>
+        <dt>Browser timezone</dt><dd id="diagTz">&mdash;</dd>
+      </dl>
+    </div>
+
+    <div class="drp-footer">
+      <span class="drp-status" id="status"></span>
+      <span class="drp-footer__spacer"></span>
+      <button class="drp-btn drp-btn--ghost" type="button" id="clearBtn">Clear</button>
+      <button class="drp-btn drp-btn--primary" type="button" id="applyBtn">Apply</button>
+    </div>
+
+  </div>
+
+  <!--
+    The Tableau Extensions API library. It is not on a public CDN that Tableau
+    guarantees, so it ships inside this folder. See README "Install the library".
+  -->
+  <script src="lib/tableau.extensions.1.latest.js"></script>
+  <script src="js/dateutil.js"></script>
+  <script src="js/presets.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/tableau-bridge.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

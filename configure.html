@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configure Date Range Picker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="drp-dialog">
+    <h1>Date Range Picker</h1>
+
+    <div class="drp-dialog__scroll">
+
+      <h2>What the picker controls</h2>
+
+      <div class="drp-row">
+        <label for="targetMode">Apply the range to</label>
+        <select id="targetMode">
+          <option value="filter">A date filter on worksheets</option>
+          <option value="parameters">Two date parameters</option>
+          <option value="both">Both a filter and parameters</option>
+        </select>
+      </div>
+
+      <div class="drp-row" data-when="filter">
+        <label for="fieldName">Date field</label>
+        <select id="fieldName"></select>
+        <p class="drp-hint" id="fieldHint">Fields are read from the data sources behind this dashboard's worksheets.</p>
+      </div>
+
+      <div class="drp-row" data-when="filter">
+        <label for="worksheets">Worksheets</label>
+        <select id="worksheets" multiple size="5"></select>
+        <p class="drp-hint">Select none to apply the filter to every worksheet on the dashboard.</p>
+      </div>
+
+      <div class="drp-row" data-when="parameters">
+        <label for="startParam">Start parameter</label>
+        <select id="startParam"></select>
+      </div>
+
+      <div class="drp-row" data-when="parameters">
+        <label for="endParam">End parameter</label>
+        <select id="endParam"></select>
+        <p class="drp-hint">Only date and date&amp;time parameters are listed.</p>
+      </div>
+
+      <h2>End date boundary</h2>
+
+      <div class="drp-policy-callout" id="policyCallout"></div>
+
+      <div class="drp-row">
+        <label for="endPolicy">End-bound rule</label>
+        <select id="endPolicy">
+          <option value="auto">Automatic, from the field's data type (recommended)</option>
+          <option value="midnight">End day at 00:00:00.000Z &mdash; pure date fields</option>
+          <option value="endOfDay">End day at 23:59:59.999Z &mdash; date &amp; time fields</option>
+        </select>
+      </div>
+
+      <div class="drp-row">
+        <label for="nullOption">Null dates</label>
+        <select id="nullOption">
+          <option value="">Leave as Tableau's default</option>
+          <option value="non-null">Exclude rows with a null date</option>
+          <option value="all">Include rows with a null date</option>
+        </select>
+      </div>
+
+      <h2>Appearance and behaviour</h2>
+
+      <div class="drp-row">
+        <label for="weekStart">Week starts on</label>
+        <select id="weekStart">
+          <option value="0">Sunday</option>
+          <option value="1">Monday</option>
+        </select>
+      </div>
+
+      <div class="drp-row">
+        <label for="dateFormat">Date display</label>
+        <select id="dateFormat">
+          <option value="medium">Sep 24, 2026</option>
+          <option value="long">September 24, 2026</option>
+          <option value="iso">2026-09-24</option>
+          <option value="us">9/24/2026</option>
+          <option value="us-padded">09/24/2026</option>
+          <option value="eu">24/09/2026</option>
+        </select>
+      </div>
+
+      <div class="drp-row">
+        <label for="defaultPreset">Default range</label>
+        <select id="defaultPreset"></select>
+        <p class="drp-hint">Used the first time the extension loads. After that it remembers the last applied range.</p>
+      </div>
+
+      <div class="drp-row">
+        <label for="minDate">Earliest selectable</label>
+        <input type="date" id="minDate">
+      </div>
+
+      <div class="drp-row">
+        <label for="maxDate">Latest selectable</label>
+        <input type="date" id="maxDate">
+        <p class="drp-hint">Leave both blank for no limit.</p>
+      </div>
+
+      <div class="drp-row">
+        <label for="accent">Accent colour</label>
+        <input type="color" id="accent">
+      </div>
+
+      <div class="drp-row">
+        <label class="drp-check"><input type="checkbox" id="applyOnSelect"> Apply as soon as the end date is picked</label>
+        <label class="drp-check"><input type="checkbox" id="showPresets"> Show the quick ranges rail</label>
+        <label class="drp-check"><input type="checkbox" id="showDiagnostics"> Show the boundary diagnostics panel</label>
+      </div>
+
+    </div>
+
+    <div class="drp-dialog__actions">
+      <span class="drp-status" id="dialogStatus"></span>
+      <span class="drp-footer__spacer"></span>
+      <button class="drp-btn" type="button" id="cancelBtn">Cancel</button>
+      <button class="drp-btn drp-btn--primary" type="button" id="saveBtn">Save</button>
+    </div>
+  </div>
+
+  <script src="lib/tableau.extensions.1.latest.js"></script>
+  <script src="js/dateutil.js"></script>
+  <script src="js/presets.js"></script>
+  <script src="js/tableau-bridge.js"></script>
+  <script src="js/configure.js"></script>
+</body>
+</html>

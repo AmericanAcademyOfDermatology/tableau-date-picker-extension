@@ -1,0 +1,559 @@
+/*!
+ * styles.css — shared by the extension surface, the configure dialog and the
+ * standalone demo page.
+ */
+
+:root {
+  --drp-accent: #1f6feb;
+  --drp-accent-soft: #e7f0ff;
+  --drp-accent-edge: #c7dbff;
+  --drp-ink: #1c2530;
+  --drp-ink-muted: #5b6875;
+  --drp-ink-faint: #97a2ae;
+  --drp-surface: #ffffff;
+  --drp-surface-alt: #f6f8fa;
+  --drp-border: #dde3ea;
+  --drp-border-strong: #c3ccd6;
+  --drp-danger: #b42318;
+  --drp-ok: #067647;
+  --drp-radius: 6px;
+  --drp-font: "Benton Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+/* The layout sets display on most blocks, which would otherwise win over the
+   user-agent rule for [hidden]. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--drp-font);
+  font-size: 13px;
+  color: var(--drp-ink);
+  background: var(--drp-surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+button:disabled { cursor: default; }
+
+/* ------------------------------------------------------------------ shell */
+
+.drp-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 10px 12px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.drp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+.drp-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--drp-ink-muted);
+  margin-right: auto;
+}
+
+.drp-body {
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.drp-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.drp-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--drp-border);
+  padding-top: 9px;
+  flex: 0 0 auto;
+}
+
+.drp-footer__spacer { margin-left: auto; }
+
+/* --------------------------------------------------------------- presets */
+
+.drp-presets {
+  flex: 0 0 132px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  padding-right: 6px;
+  border-right: 1px solid var(--drp-border);
+}
+
+.drp-presets__heading {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--drp-ink-faint);
+  padding: 4px 6px 2px;
+  flex: 0 0 auto;
+}
+
+.drp-preset {
+  /* flex-shrink must stay 0, otherwise a short extension zone squashes every
+     row to zero height instead of scrolling the rail. */
+  flex: 0 0 auto;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: var(--drp-radius);
+  padding: 5px 8px;
+  color: var(--drp-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drp-preset:hover { background: var(--drp-surface-alt); }
+
+.drp-preset[aria-pressed="true"] {
+  background: var(--drp-accent-soft);
+  color: var(--drp-accent);
+  font-weight: 600;
+}
+
+.drp-presets--hidden { display: none; }
+
+/* --------------------------------------------------------------- inputs */
+
+.drp-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+.drp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.drp-field__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--drp-ink-faint);
+}
+
+.drp-field__input {
+  font: inherit;
+  color: var(--drp-ink);
+  background: var(--drp-surface);
+  border: 1px solid var(--drp-border-strong);
+  border-radius: var(--drp-radius);
+  padding: 5px 8px;
+  width: 132px;
+}
+
+.drp-field__input:focus {
+  outline: 2px solid var(--drp-accent);
+  outline-offset: -1px;
+  border-color: var(--drp-accent);
+}
+
+.drp-field__input--invalid {
+  border-color: var(--drp-danger);
+  background: #fff5f4;
+}
+
+.drp-field__arrow {
+  color: var(--drp-ink-faint);
+  padding-bottom: 7px;
+}
+
+.drp-nights {
+  font-size: 12px;
+  color: var(--drp-ink-muted);
+  padding-bottom: 7px;
+}
+
+/* -------------------------------------------------------------- calendar */
+
+.drp-cal { min-width: 0; }
+
+.drp-cal__nav {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.drp-cal__navbtn {
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--drp-radius);
+  width: 26px;
+  height: 26px;
+  line-height: 1;
+  font-size: 18px;
+  color: var(--drp-ink-muted);
+  margin-top: 2px;
+}
+
+.drp-cal__navbtn:hover:not(:disabled) {
+  background: var(--drp-surface-alt);
+  border-color: var(--drp-border);
+  color: var(--drp-ink);
+}
+
+.drp-cal__navbtn:disabled { color: var(--drp-border-strong); }
+
+.drp-cal__months {
+  display: flex;
+  gap: 18px;
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
+}
+
+.drp-cal__month { flex: 1 1 0; min-width: 0; max-width: 232px; }
+
+.drp-cal__caption {
+  text-align: center;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 4px 0 8px;
+}
+
+.drp-cal__weekdays,
+.drp-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+
+.drp-cal__weekday {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--drp-ink-faint);
+  padding-bottom: 4px;
+  text-decoration: none;
+  border: 0;
+}
+
+.drp-day {
+  position: relative;
+  border: 0;
+  background: transparent;
+  color: var(--drp-ink);
+  font-size: 12px;
+  line-height: 1;
+  /* A measured row height, not an aspect ratio. relayout() in main.js sets
+     --drp-day-h from the space actually left over, so all six week rows fit
+     whatever zone the dashboard author draws. */
+  height: var(--drp-day-h, 28px);
+  padding: 0;
+  border-radius: var(--drp-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drp-day:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--drp-accent);
+}
+
+.drp-day:focus-visible {
+  outline: 2px solid var(--drp-accent);
+  outline-offset: 1px;
+  z-index: 2;
+}
+
+.drp-day--outside { visibility: hidden; }
+
+.drp-day--blocked {
+  color: var(--drp-ink-faint);
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.drp-day--today { font-weight: 700; }
+
+.drp-day--today::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* The connected bar. Endpoints are solid; the span between them is tinted and
+   squared off so the run reads as one continuous selection. */
+.drp-day--in-range {
+  background: var(--drp-accent-soft);
+  border-radius: 0;
+}
+
+.drp-day--range-start {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+.drp-day--range-end {
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
+.drp-day--endpoint {
+  background: var(--drp-accent);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 999px;
+}
+
+.drp-day--endpoint::after { background: #fff; }
+
+.drp-day--range-single { border-radius: 999px; }
+
+/* --------------------------------------------------------------- buttons */
+
+.drp-btn {
+  border: 1px solid var(--drp-border-strong);
+  background: var(--drp-surface);
+  color: var(--drp-ink);
+  border-radius: var(--drp-radius);
+  padding: 6px 12px;
+  font-weight: 500;
+}
+
+.drp-btn:hover:not(:disabled) { background: var(--drp-surface-alt); }
+
+.drp-btn:disabled { opacity: 0.5; }
+
+.drp-btn--primary {
+  background: var(--drp-accent);
+  border-color: var(--drp-accent);
+  color: #fff;
+}
+
+.drp-btn--primary:hover:not(:disabled) { filter: brightness(0.93); }
+
+.drp-btn--ghost {
+  border-color: transparent;
+  color: var(--drp-ink-muted);
+}
+
+.drp-btn--ghost:hover:not(:disabled) {
+  background: var(--drp-surface-alt);
+  color: var(--drp-ink);
+}
+
+/* ---------------------------------------------------------- status panes */
+
+.drp-status {
+  font-size: 12px;
+  color: var(--drp-ink-muted);
+  min-height: 16px;
+}
+
+.drp-status--error { color: var(--drp-danger); }
+.drp-status--ok { color: var(--drp-ok); }
+
+.drp-diagnostics {
+  flex: 0 0 auto;
+  max-height: 120px;
+  overflow: auto;
+  border: 1px solid var(--drp-border);
+  border-radius: var(--drp-radius);
+  background: var(--drp-surface-alt);
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--drp-ink-muted);
+}
+
+.drp-diagnostics dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 10px;
+}
+
+.drp-diagnostics dt { font-weight: 600; color: var(--drp-ink); }
+.drp-diagnostics dd { margin: 0; font-family: Consolas, "SF Mono", Menlo, monospace; }
+
+.drp-diagnostics--hidden { display: none; }
+
+.drp-notice {
+  border: 1px solid var(--drp-border);
+  border-left: 3px solid var(--drp-accent);
+  border-radius: var(--drp-radius);
+  background: var(--drp-surface-alt);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.drp-notice--error { border-left-color: var(--drp-danger); }
+
+.drp-notice p { margin: 0 0 6px; }
+.drp-notice p:last-child { margin-bottom: 0; }
+
+/* ---------------------------------------------------------- compact mode */
+
+.drp-shell--compact .drp-presets { flex-basis: 110px; }
+.drp-shell--compact .drp-cal__months { gap: 10px; }
+.drp-shell--compact .drp-cal__caption { padding: 2px 0 6px; }
+.drp-shell--short .drp-day { font-size: 11px; }
+.drp-shell--short .drp-cal__caption { padding: 1px 0 4px; font-size: 12px; }
+.drp-shell--short .drp-cal__weekday { padding-bottom: 2px; }
+
+.drp-shell--tiny .drp-presets { display: none; }
+.drp-shell--tiny .drp-title { display: none; }
+
+/* --------------------------------------------------------------- dialog */
+
+.drp-dialog {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 14px 16px;
+  gap: 12px;
+  background: var(--drp-surface);
+}
+
+.drp-dialog__scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.drp-dialog h1 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.drp-dialog h2 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--drp-ink-faint);
+  margin: 16px 0 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--drp-border);
+}
+
+.drp-dialog h2:first-of-type { margin-top: 0; }
+
+.drp-row {
+  display: grid;
+  grid-template-columns: 148px 1fr;
+  align-items: start;
+  gap: 8px 10px;
+  margin-bottom: 9px;
+}
+
+.drp-row > label {
+  padding-top: 5px;
+  color: var(--drp-ink-muted);
+}
+
+.drp-row select,
+.drp-row input[type="text"],
+.drp-row input[type="date"],
+.drp-row input[type="color"] {
+  font: inherit;
+  width: 100%;
+  border: 1px solid var(--drp-border-strong);
+  border-radius: var(--drp-radius);
+  padding: 5px 7px;
+  background: var(--drp-surface);
+  color: var(--drp-ink);
+}
+
+.drp-row input[type="color"] { padding: 2px; height: 28px; }
+
+.drp-row select[multiple] { height: 96px; }
+
+.drp-hint {
+  grid-column: 2;
+  font-size: 11px;
+  color: var(--drp-ink-faint);
+  line-height: 1.5;
+  margin-top: -4px;
+}
+
+.drp-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  grid-column: 1 / -1;
+}
+
+.drp-dialog__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--drp-border);
+  padding-top: 11px;
+}
+
+.drp-dialog__actions .drp-footer__spacer { margin-right: auto; }
+
+.drp-policy-callout {
+  background: var(--drp-accent-soft);
+  border: 1px solid var(--drp-accent-edge);
+  border-radius: var(--drp-radius);
+  padding: 9px 11px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--drp-ink);
+  margin: 6px 0 10px;
+}
+
+.drp-policy-callout code {
+  font-family: Consolas, "SF Mono", Menlo, monospace;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0 3px;
+  border-radius: 3px;
+}
