@@ -202,6 +202,45 @@ host-side code changes on their next load without being republished. Bumping
 files with a short cache lifetime, or a `Cache-Control: no-cache` header, so an
 update reaches viewers promptly; `serve.ps1` already sends `no-store`.
 
+### Publishing to GitHub Pages
+
+This repository is laid out to publish from its root, so the whole project is
+the site. `.nojekyll` is present, which skips Jekyll processing and makes the
+build faster.
+
+Create an empty repository named `tableau-date-picker-extension` on GitHub, then:
+
+```powershell
+git remote add origin https://github.com/OWNER/tableau-date-picker-extension.git
+git push -u origin main
+```
+
+In the repository, open **Settings → Pages**, set **Source** to *Deploy from a
+branch*, choose branch `main` and folder `/ (root)`, and save. The first build
+takes a minute or two. The extension is then at:
+
+```
+https://OWNER.github.io/tableau-date-picker-extension/index.html
+```
+
+Put that address in `<source-location><url>` in `daterangepicker.trex`, have an
+administrator add `https://OWNER.github.io` to the Tableau extension safe list,
+and re-add the Extension object in any dashboard that still points at
+`localhost`.
+
+Two things to know before choosing this host:
+
+* **A Pages site is readable by anyone with the URL**, even when the repository
+  is private, except on GitHub Enterprise Cloud. The code becomes public. No
+  workbook data does: the published files reference no external URL and make no
+  `fetch`, `XMLHttpRequest`, `WebSocket` or `sendBeacon` call, so the host only
+  ever serves static files and the extension talks to Tableau through the
+  browser's own frame messaging.
+* **Updates are not instant.** Pages serves through a CDN with roughly a
+  ten-minute cache and does not allow custom cache headers. Keep iterating
+  locally with `serve.cmd`, which sends `no-store`, and push when a change is
+  ready.
+
 ---
 
 ## Configuration reference
