@@ -211,7 +211,7 @@ build faster.
 Create an empty repository named `tableau-date-picker-extension` on GitHub, then:
 
 ```powershell
-git remote add origin https://github.com/OWNER/tableau-date-picker-extension.git
+git remote add origin https://github.com/AmericanAcademyOfDermatology/tableau-date-picker-extension.git
 git push -u origin main
 ```
 
@@ -220,13 +220,18 @@ branch*, choose branch `main` and folder `/ (root)`, and save. The first build
 takes a minute or two. The extension is then at:
 
 ```
-https://OWNER.github.io/tableau-date-picker-extension/index.html
+https://americanacademyofdermatology.github.io/tableau-date-picker-extension/index.html
 ```
 
-Put that address in `<source-location><url>` in `daterangepicker.trex`, have an
-administrator add `https://OWNER.github.io` to the Tableau extension safe list,
-and re-add the Extension object in any dashboard that still points at
+`daterangepicker.trex` already carries that address in
+`<source-location><url>`. What remains is to have an administrator add
+`https://americanacademyofdermatology.github.io` to the Tableau extension safe
+list, and to re-add the Extension object in any dashboard still pointing at
 `localhost`.
+
+To go back to local development, point the manifest at
+`http://localhost:8765/index.html` again and run `serve.cmd`. Keeping a second
+copy of the `.trex` for local use avoids editing the file back and forth.
 
 Two things to know before choosing this host:
 
