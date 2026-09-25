@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
   Tableau dashboard extension manifest.
 
-  Before deploying, change <url> to wherever you host this folder and bump
-  <dashboard-extension extension-version="..."> whenever you publish a change.
-  Tableau caches by the combination of id, version and URL, so two manifests
-  sharing all three will not both load in one workbook.
+  LOCAL DEVELOPMENT COPY.
+
+  Identical to daterangepicker.trex except that <url> points at the local
+  server started by serve.cmd, and the display name is suffixed "(local)".
+  Use this one while iterating; use daterangepicker.trex for the published
+  GitHub Pages build. The two differ by URL, so Tableau treats them as
+  distinct extensions and both can coexist.
 -->
 <manifest manifest-version="0.1" xmlns="http://www.tableau.com/xml/extension_manifest">
   <dashboard-extension id="com.aad.extensions.daterangepicker" extension-version="1.0.0">
@@ -18,7 +21,7 @@
     <author name="American Academy of Dermatology" email="noreply@aad.org" organization="American Academy of Dermatology" website="https://www.aad.org"/>
     <min-api-version>1.4</min-api-version>
     <source-location>
-      <url>https://americanacademyofdermatology.github.io/tableau-date-picker-extension/index.html</url>
+      <url>http://localhost:8765/index.html</url>
     </source-location>
     <icon>iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAALSSURBVHhe7ZbPaxNBFMf7n8Rb6V8QjwVvHvw7vHnQq1C89FCwF8GDgrdeLIj04KnQgpQ0ohexdjWlkIJko21+NU2ythl5hS2Z787ILvu2M9mZD3wvzXu8mU9207ew4PF4PHNAZbG6XFmqrkhZrC5jHScmZmaGDnVn6a6YDf0N6zgxMTMzJg5pYmZmTBzSxMzMmDikiZmZMXFIEzMzY+KQtz4Th7kQdKAEm1wIOlCCTS4EHSjBJheCDpRgkwtBB0qwyYWgAyXY5ELQgRJsciHoQAk2uRB0oASbXAg6UIJNLgQdKMEmF4IOlGCTC0EHSmYb1l+8Km1yiSkzXowGL0aDF6PBi9FQiJjROBL94VgMRxP8SMLmOnYx4WlffD5o3uSk1cGSa2yvYxVD38Ts0Di9wWiu6ghWMe2zQWIo5Ve7O1d1BKsYem9xKOVP53yu6ghWMcTPZlsaengciqvpFMusr2MXQ9AjS48n/dCphsbYXFeImDLgxWjwYjSwi+ldCHEcRqLRGouj1kQ0T4U2H4NL8f5LJLa//U18lreOzqHDyOYbnMibZT3oiL2GSOTp5oWoPPp9k4dvzhM1eeqebCT/BRNWbb61HyPpEpv1S+kScV5uT1jrdg7kJ0J3PmObbz3oShd59k7+duM83hiy1q1/GKY6n7HNtxbIj//r3ShxCcrqlvxk5a17uy8/Cbrz3crm+/VI3iw/fQ/FXmMqXYTy4HlPusS91a7YPeSru7/WFeMoubwZ23zpv0MtGFy/PvtBXyklDr0C9FrQD6fqsnnqGmHysjFGNl8Sgwc2ETpHHtjF0P6A+4WJ/G+PSQO7mLJQiJg0myVhcx27mLSbpe11rGLSbpa21xGsYtJulrbXEaxi0m6WttcRrGKItJul7XXsYog0myVhc10hYsqAF6PBi9HgxWjwYjR4MRpyiXEl6EAJNrkQdKAEm1wIOvB4PJ4i+Qf5/0zuE8DWmQAAAABJRU5ErkJggg==</icon>
     <permissions>
@@ -30,7 +33,7 @@
   </dashboard-extension>
   <resources>
     <resource id="name">
-      <text locale="en_US">Date Range Picker</text>
+      <text locale="en_US">Date Range Picker (local)</text>
     </resource>
   </resources>
 </manifest>

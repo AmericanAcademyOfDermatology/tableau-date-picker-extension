@@ -66,7 +66,8 @@ data.
 
 | Path | Purpose |
 | --- | --- |
-| `daterangepicker.trex` | The manifest you drag into a dashboard. **Edit `<url>` before deploying.** |
+| `daterangepicker.trex` | The manifest for the published GitHub Pages build. Drag this one into a dashboard for real use. |
+| `daterangepicker.local.trex` | The same manifest pointing at `http://localhost:8765/index.html`, for use with `serve.cmd`. Its display name is suffixed *(local)* so the two are distinguishable in a dashboard. |
 | `index.html` | The extension surface. |
 | `configure.html` | The settings dialog, reached from the extension's *Configure…* menu. |
 | `js/dateutil.js` | Calendar-day arithmetic and the UTC boundary construction. |
@@ -146,7 +147,9 @@ Any static host works equally well — IIS, nginx, an S3 bucket, GitHub Pages, o
 ### 3. Add it to a dashboard
 
 1. In Tableau Desktop, drag an **Extension** object onto the dashboard.
-2. Choose **Access Local Extensions** and open `daterangepicker.trex`.
+2. Choose **Access Local Extensions** and open `daterangepicker.local.trex`
+   while `serve.cmd` is running, or `daterangepicker.trex` once the GitHub
+   Pages site is live.
 3. Allow the extension when prompted. It requests **full data** access, which it
    uses only to read field names and data types so it can pick the correct end
    boundary.
@@ -164,6 +167,19 @@ Any static host works equally well — IIS, nginx, an S3 bucket, GitHub Pages, o
 * On Tableau Server or Tableau Cloud, an administrator must add the hosting URL
   to the extension safe list before the extension will load for other users.
   ([Manage Dashboard and Viz Extensions](https://help.tableau.com/current/online/en-us/dashboard_extensions_server.htm))
+
+**Manifest gotcha.** Tableau's parser requires `email` on the `<author>`
+element, even though the published manifest documentation describes only `name`
+and `website` as required. Omitting it produces:
+
+```
+Error parsing extension manifest:
+Error(17,130): missing required attribute 'email'
+```
+
+Both manifests here set it to the non-personal address `noreply@aad.org`, which
+satisfies the parser without publishing an individual's address in a public
+repository.
 
 ---
 
