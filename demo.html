@@ -113,6 +113,14 @@
       'drp.fieldName': 'Order Date',
       'drp.defaultPreset': 'last30'
     };
+
+    // Any query parameter overrides a setting, so a scenario can be reproduced
+    // from the address bar. For example:
+    //   demo.html?drp.onLoad=default&drp.defaultPreset=thisMonth
+    //            &drp.currentStart=2026-01-05&drp.currentEnd=2026-01-20
+    new URLSearchParams(window.location.search).forEach(function (value, key) {
+      window.DRP_DEMO_SETTINGS[key] = value;
+    });
   </script>
   <script src="js/dateutil.js"></script>
   <script src="js/presets.js"></script>

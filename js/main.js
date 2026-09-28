@@ -43,6 +43,8 @@
       buildUi();
       checkSetup();
       Bridge.onDashboardResize(scheduleLayout);
+      return applyOnLoad();
+    }).then(function () {
       return refreshReadback();
     }).catch(function (err) {
       showFatal(Bridge.describeError(err));
@@ -86,6 +88,7 @@
       minDate: D.fromISO(raw[K.minDate] || ''),
       maxDate: D.fromISO(raw[K.maxDate] || ''),
       defaultPreset: raw[K.defaultPreset] || 'last30',
+      onLoad: raw[K.onLoad] || 'default',
       currentStart: D.fromISO(raw[K.currentStart] || ''),
       currentEnd: D.fromISO(raw[K.currentEnd] || '')
     };
@@ -144,12 +147,29 @@
     syncUi();
   }
 
+  /**
+   * The range the extension opens on.
+   *
+   * 'default' re-resolves the configured preset against today, which is the
+   * point of a relative range such as "This month": a workbook opened in
+   * October must show October, not whatever month it was published in. The
+   * saved range is deliberately ignored in that mode.
+   *
+   * 'last' restores the range that was applied when the workbook was last
+   * saved, falling back to the default preset the very first time.
+   *
+   * 'none' shows the saved range without touching the workbook's own filters.
+   */
   function initialRange() {
+    var preset = Presets.resolve(config.defaultPreset, presetOptions()) ||
+      Presets.resolve('last30', presetOptions());
+
+    if (config.onLoad === 'default') return preset;
+
     if (config.currentStart && config.currentEnd) {
       return { start: config.currentStart, end: config.currentEnd };
     }
-    return Presets.resolve(config.defaultPreset, presetOptions()) ||
-      Presets.resolve('last30', presetOptions());
+    return preset;
   }
 
   function applyAccent(hex) {
@@ -276,8 +296,16 @@
 
   /* ---------------------------------------------------------------- apply */
 
-  function apply() {
-    if (!selection.start || !selection.end) return;
+  /**
+   * @param {Object} [opts]
+   *   persist {boolean}  false while applying the opening range. Saving
+   *     settings calls settings.saveAsync(), which marks the workbook modified
+   *     in Tableau Desktop; doing that on every open would prompt the viewer
+   *     to save a workbook they never edited.
+   */
+  function apply(opts) {
+    var persist = !opts || opts.persist !== false;
+    if (!selection.start || !selection.end) return Promise.resolve();
 
     if (!Bridge.isAvailable()) {
       dirty = false;
@@ -286,25 +314,27 @@
       setStatus('Demo mode: would filter ' + D.toISO(selection.start) +
         ' through ' + D.toISO(selection.end) + '.', 'ok');
       syncUi();
-      return;
+      return Promise.resolve();
     }
 
     if (!isConfigured()) {
       checkSetup();
-      return;
+      return Promise.resolve();
     }
 
     dom.applyBtn.disabled = true;
     setStatus('Applying…');
 
-    Bridge.applyRangeAsync(selection.start, selection.end, config).then(function (result) {
+    return Bridge.applyRangeAsync(selection.start, selection.end, config).then(function (result) {
       lastApplied = result.bounds;
       dirty = false;
 
-      var patch = {};
-      patch[K.currentStart] = D.toISO(selection.start);
-      patch[K.currentEnd] = D.toISO(selection.end);
-      Bridge.writeSettings(patch);
+      if (persist) {
+        var patch = {};
+        patch[K.currentStart] = D.toISO(selection.start);
+        patch[K.currentEnd] = D.toISO(selection.end);
+        Bridge.writeSettings(patch);
+      }
 
       if (result.applied.errors.length) {
         setStatus(result.applied.errors.join(' · '), 'error');
@@ -316,6 +346,28 @@
     }).catch(function (err) {
       setStatus(Bridge.describeError(err), 'error');
       syncUi();
+    });
+  }
+
+  /**
+   * Push the opening range into the workbook.
+   *
+   * Without this the extension only *displayed* a range at startup while the
+   * worksheet kept whatever filter was saved with the workbook, so a dashboard
+   * always opened on the dates it was published with.
+   *
+   * A failure here is reported in the status line rather than thrown, because
+   * a picker that cannot reach one worksheet should still be usable.
+   */
+  function applyOnLoad() {
+    if (config.onLoad === 'none') return Promise.resolve();
+    if (!Bridge.isAvailable()) return Promise.resolve();
+    if (!isConfigured()) return Promise.resolve();
+    if (!selection.start || !selection.end) return Promise.resolve();
+
+    return apply({ persist: false }).catch(function (err) {
+      setStatus('Could not apply the opening range: ' +
+        Bridge.describeError(err), 'error');
     });
   }
 
@@ -522,7 +574,9 @@
   }
 
   function reloadConfig() {
+    var previous = config;
     config = normaliseConfig(Bridge.readSettings());
+
     applyAccent(config.accent);
     calendar.setWeekStart(config.weekStart);
     calendar.setBounds(config.minDate, config.maxDate);
@@ -532,6 +586,24 @@
     checkSetup();
     relayout();
     dirty = true;
+
+    // Changing the opening behaviour should be visible straight away rather
+    // than only on the next open, otherwise there is no way to tell whether
+    // the setting took. Other settings leave the current selection alone.
+    var openingChanged = !previous ||
+      previous.defaultPreset !== config.defaultPreset ||
+      previous.onLoad !== config.onLoad;
+
+    if (openingChanged && config.onLoad === 'default') {
+      var next = initialRange();
+      if (next) {
+        setSelection(next.start, next.end, {});
+        syncUi();
+        applyOnLoad();
+        return;
+      }
+    }
+
     syncUi();
     refreshReadback();
   }

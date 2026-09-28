@@ -276,7 +276,8 @@ Two things to know before choosing this host:
 | **Null dates** | Leaves Tableau's default alone, or sets `nullOption` to include or exclude null dates. |
 | **Week starts on** | Sunday or Monday. |
 | **Date display** | How dates are shown in the header and the two text boxes. Typed entry accepts this format, ISO, and month names regardless. |
-| **Default range** | Used the first time the extension loads. After that it restores the last applied range from the workbook's saved settings. |
+| **Default range** | The named range that **When the dashboard opens** refers to. |
+| **When the dashboard opens** | `Apply the default range` re-resolves that preset against today's date every time the dashboard is opened and applies it, so a relative range such as *This month* follows the calendar. `Apply the range last used` restores what was in force when the workbook was saved. `Show the last range but change no filters` displays a range without touching the workbook's filters. The default is `Apply the default range`. |
 | **Earliest / Latest selectable** | Greys out days outside the window and clamps the presets to it. |
 | **Accent colour** | Tints the selected range. |
 | **Apply as soon as the end date is picked** | On by default. Turn it off to show an explicit **Apply** button. |

@@ -93,7 +93,16 @@
       <div class="drp-row">
         <label for="defaultPreset">Default range</label>
         <select id="defaultPreset"></select>
-        <p class="drp-hint">Used the first time the extension loads. After that it remembers the last applied range.</p>
+      </div>
+
+      <div class="drp-row">
+        <label for="onLoad">When the dashboard opens</label>
+        <select id="onLoad">
+          <option value="default">Apply the default range above</option>
+          <option value="last">Apply the range last used when the workbook was saved</option>
+          <option value="none">Show the last range but change no filters</option>
+        </select>
+        <p class="drp-hint" id="onLoadHint"></p>
       </div>
 
       <div class="drp-row">

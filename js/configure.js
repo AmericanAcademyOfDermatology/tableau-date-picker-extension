@@ -31,6 +31,7 @@
       restore();
       refreshVisibility();
       refreshPolicyCallout();
+      refreshOnLoadHint();
     }).catch(function (err) {
       setStatus(Bridge.describeError(err), 'error');
     });
@@ -39,6 +40,7 @@
   function cacheDom() {
     ['targetMode', 'fieldName', 'fieldHint', 'worksheets', 'startParam', 'endParam',
      'endPolicy', 'nullOption', 'weekStart', 'dateFormat', 'defaultPreset',
+     'onLoad', 'onLoadHint',
      'minDate', 'maxDate', 'accent', 'applyOnSelect', 'showPresets',
      'showDiagnostics', 'saveBtn', 'cancelBtn', 'dialogStatus', 'policyCallout'
     ].forEach(function (id) { dom[id] = document.getElementById(id); });
@@ -120,6 +122,7 @@
     dom.weekStart.value = saved[K.weekStart] === '1' ? '1' : '0';
     dom.dateFormat.value = saved[K.dateFormat] || 'medium';
     dom.defaultPreset.value = saved[K.defaultPreset] || 'last30';
+    dom.onLoad.value = saved[K.onLoad] || 'default';
     dom.minDate.value = saved[K.minDate] || '';
     dom.maxDate.value = saved[K.maxDate] || '';
     dom.accent.value = saved[K.accent] || '#1f6feb';
@@ -149,12 +152,47 @@
 
   function wire() {
     dom.targetMode.addEventListener('change', refreshVisibility);
+    dom.onLoad.addEventListener('change', refreshOnLoadHint);
+    dom.defaultPreset.addEventListener('change', refreshOnLoadHint);
     dom.fieldName.addEventListener('change', refreshPolicyCallout);
     dom.endPolicy.addEventListener('change', refreshPolicyCallout);
     dom.saveBtn.addEventListener('click', save);
     dom.cancelBtn.addEventListener('click', function () {
       global.tableau.extensions.ui.closeDialog('cancel');
     });
+  }
+
+  /**
+   * Spell out what the chosen combination does, using today's date, so the
+   * difference between a relative range and a remembered one is concrete.
+   */
+  function refreshOnLoadHint() {
+    var mode = dom.onLoad.value;
+
+    if (mode === 'none') {
+      dom.onLoadHint.textContent =
+        'The picker shows the last range but applies nothing, so the workbook ' +
+        'opens on whatever filters were saved with it.';
+      return;
+    }
+
+    if (mode === 'last') {
+      dom.onLoadHint.textContent =
+        'The range in force when the workbook was last saved is reapplied. ' +
+        'Fixed dates stay fixed; they do not move forward with the calendar.';
+      return;
+    }
+
+    var resolved = Presets.resolve(dom.defaultPreset.value, {
+      weekStart: dom.weekStart.value === '1' ? 1 : 0,
+      min: D.fromISO(dom.minDate.value || ''),
+      max: D.fromISO(dom.maxDate.value || '')
+    });
+
+    dom.onLoadHint.textContent = resolved
+      ? 'Resolved fresh on every open. Opening the dashboard today would apply ' +
+        D.toISO(resolved.start) + ' through ' + D.toISO(resolved.end) + '.'
+      : 'Resolved fresh on every open.';
   }
 
   function refreshVisibility() {
@@ -244,6 +282,7 @@
     patch[K.weekStart] = dom.weekStart.value;
     patch[K.dateFormat] = dom.dateFormat.value;
     patch[K.defaultPreset] = dom.defaultPreset.value;
+    patch[K.onLoad] = dom.onLoad.value;
     patch[K.minDate] = dom.minDate.value || '';
     patch[K.maxDate] = dom.maxDate.value || '';
     patch[K.accent] = dom.accent.value;

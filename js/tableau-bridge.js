@@ -29,6 +29,7 @@
     minDate: 'drp.minDate',
     maxDate: 'drp.maxDate',
     defaultPreset: 'drp.defaultPreset',
+    onLoad: 'drp.onLoad',                   // 'default' | 'last' | 'none'
     currentStart: 'drp.currentStart',
     currentEnd: 'drp.currentEnd'
   };
@@ -51,6 +52,9 @@
   DEFAULTS[SETTING_KEYS.minDate] = '';
   DEFAULTS[SETTING_KEYS.maxDate] = '';
   DEFAULTS[SETTING_KEYS.defaultPreset] = 'last30';
+  // Workbooks saved before this setting existed have no stored value, and
+  // 'default' is the behaviour a configured default range implies.
+  DEFAULTS[SETTING_KEYS.onLoad] = 'default';
   DEFAULTS[SETTING_KEYS.currentStart] = '';
   DEFAULTS[SETTING_KEYS.currentEnd] = '';
 
