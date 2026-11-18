@@ -316,10 +316,19 @@
     });
   };
 
+  /** The most week rows any month can occupy. */
+  var MAX_ROWS = 6;
+
   /**
-   * Size the week rows to the space actually left over, and drop to a single
-   * month when two will not fit. Mirrors what the old inline layout did, but
-   * against the dialog rather than the dashboard zone.
+   * Size the week rows and drop to a single month when two will not fit.
+   *
+   * The row height is derived from MAX_ROWS, never from the row count of the
+   * months currently on screen. Dividing by the actual count would make cells
+   * on a five-row month taller than on a six-row month, so the grid would
+   * change height as the user pages and the navigation arrows would walk up
+   * and down under the pointer — unusable when stepping back through many
+   * months. Sizing for the worst case keeps the cells and the arrows fixed;
+   * a five-row month simply leaves one row of space below the grid.
    */
   Picker.prototype._fit = function () {
     var width = this.calHost.clientWidth;
@@ -333,8 +342,7 @@
     var chrome = (caption ? caption.offsetHeight : 22) +
                  (weekdays ? weekdays.offsetHeight : 16);
 
-    var rows = this.calendar.rows || 6;
-    var perRow = Math.floor((available - chrome - (rows - 1)) / rows);
+    var perRow = Math.floor((available - chrome - (MAX_ROWS - 1)) / MAX_ROWS);
     perRow = Math.max(18, Math.min(30, perRow));
 
     document.documentElement.style.setProperty('--drp-day-h', perRow + 'px');

@@ -210,7 +210,7 @@
    * alone, because a half-written ISO date is worse than a long one.
    */
   function formatRange(s, e) {
-    var sep = '  –  ';
+    var sep = ' – ';
     var full = D.format(s, config.dateFormat) + sep + D.format(e, config.dateFormat);
     if (config.dateFormat === 'iso' || s.y !== e.y) return full;
 
@@ -227,17 +227,16 @@
    * The bar is narrow, so the detail that used to sit in a diagnostics strip
    * lives in its tooltip instead.
    */
+  /**
+   * Kept short on purpose. The UTC bounds live in the picker's diagnostics
+   * panel, where someone verifying the end-date behaviour will be looking;
+   * on the dashboard they were noise.
+   */
   function describeTooltip() {
     var s = selection.start, e = selection.end;
     if (!s || !e) return 'Open the date range picker';
 
-    var policy = Bridge.resolveEndPolicy(config.endPolicy, config.detectedType);
-    var bounds = D.boundsFor(s, e, policy);
-    var lines = [
-      D.toISO(s) + ' through ' + D.toISO(e),
-      'min ' + bounds.min.toISOString(),
-      'max ' + bounds.max.toISOString()
-    ];
+    var lines = [D.toISO(s) + ' through ' + D.toISO(e)];
     if (config.showDiagnostics && lastReadback) lines.push('read back ' + lastReadback);
     lines.push('Click to change');
     return lines.join('\n');

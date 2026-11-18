@@ -69,14 +69,15 @@ button:disabled { cursor: default; }
      preset name would quietly steal space from the range readout. Capping it
      costs nothing: the dropdown still shows every label in full when open. */
   flex: 0 1 auto;
-  min-width: 72px;
-  max-width: 130px;
+  min-width: 68px;
+  max-width: 110px;
   border: 1px solid var(--drp-border-strong);
   border-radius: var(--drp-radius);
   background: var(--drp-surface);
   color: var(--drp-ink);
   padding: 4px 6px;
-  height: 28px;
+  height: 26px;
+  font-size: 12px;  /* matches the range readout beside it */
 }
 
 .drp-bar__preset:focus-visible {
@@ -86,14 +87,17 @@ button:disabled { cursor: default; }
 
 .drp-bar__open {
   /* The range readout outranks everything else on the bar, so it keeps a
-     floor while the status text beside it shrinks and ellipsises. */
+     floor while the dropdown and status beside it shrink first. 151px is the
+     worst case measured: 137px for a range spanning two years at 12px, plus
+     14px of padding, 2px of border (box-sizing is border-box) and 2px spare
+     for sub-pixel rounding. */
   flex: 1 1 auto;
-  min-width: 150px;
+  min-width: 155px;
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 8px;
+  height: 26px;
+  padding: 0 7px;
   border: 1px solid var(--drp-border-strong);
   border-radius: var(--drp-radius);
   background: var(--drp-surface);
@@ -111,26 +115,19 @@ button:disabled { cursor: default; }
   outline-offset: 1px;
 }
 
-.drp-bar__icon {
-  flex: 0 0 auto;
-  width: 13px;
-  height: 13px;
-  color: var(--drp-ink-muted);
-}
-
+/* 12px, not the 13px body size. The widest string the bar must hold is a range
+   spanning two years — "Nov 1, 2025 – Jan 3, 2026" — where the year cannot be
+   collapsed. Measured: 126px at 11px, 137px at 12px, 149px at 13px. Dropping
+   the caret freed 15px, which buys the step from 11px to 12px and leaves 4px
+   over, so 12px costs less room than 11px did with a caret. 13px does not fit. */
 .drp-bar__range {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12px;
   font-weight: 600;
-}
-
-.drp-bar__caret {
-  flex: 0 0 auto;
-  color: var(--drp-ink-faint);
-  font-size: 10px;
 }
 
 /* Stack onto two lines in a zone too narrow for one. */
@@ -241,9 +238,11 @@ button:disabled { cursor: default; }
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  /* Centred, not top-aligned: the row count varies between five and six as
-     the user pages, and centring absorbs that without the grid jumping. */
-  align-items: center;
+  /* Top-aligned, never centred. The row count varies between five and six as
+     the user pages; centring would move the calendar's top edge each time,
+     taking the navigation arrows with it. Anchoring the top means the grid
+     only ever grows downward and the arrows stay put. */
+  align-items: flex-start;
   justify-content: center;
 }
 

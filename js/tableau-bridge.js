@@ -325,7 +325,11 @@
    * has to find room for the bar.
    */
   function openPickerDialog(payload) {
-    return openDialog('picker.html', payload, { height: 360, width: 600 });
+    // Sized to the content: two 224px months plus the nav arrows and padding
+    // come to ~534px wide, and a six-row grid at ~25px per row plus the header
+    // and footer comes to ~300px tall. The picker adapts if Tableau's window
+    // chrome leaves it less than this.
+    return openDialog('picker.html', payload, { height: 318, width: 540 });
   }
 
   function openDialog(page, payload, size) {
