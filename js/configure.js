@@ -41,7 +41,7 @@
     ['targetMode', 'fieldName', 'fieldHint', 'worksheets', 'startParam', 'endParam',
      'endPolicy', 'nullOption', 'weekStart', 'dateFormat', 'defaultPreset',
      'onLoad', 'onLoadHint',
-     'minDate', 'maxDate', 'accent', 'applyOnSelect', 'showPresets',
+     'minDate', 'maxDate', 'accent', 'showPresets',
      'showDiagnostics', 'saveBtn', 'cancelBtn', 'dialogStatus', 'policyCallout'
     ].forEach(function (id) { dom[id] = document.getElementById(id); });
   }
@@ -126,7 +126,6 @@
     dom.minDate.value = saved[K.minDate] || '';
     dom.maxDate.value = saved[K.maxDate] || '';
     dom.accent.value = saved[K.accent] || '#1f6feb';
-    dom.applyOnSelect.checked = saved[K.applyOnSelect] !== 'false';
     dom.showPresets.checked = saved[K.showPresets] !== 'false';
     dom.showDiagnostics.checked = saved[K.showDiagnostics] === 'true';
 
@@ -168,13 +167,6 @@
    */
   function refreshOnLoadHint() {
     var mode = dom.onLoad.value;
-
-    if (mode === 'none') {
-      dom.onLoadHint.textContent =
-        'The picker shows the last range but applies nothing, so the workbook ' +
-        'opens on whatever filters were saved with it.';
-      return;
-    }
 
     if (mode === 'last') {
       dom.onLoadHint.textContent =
@@ -286,7 +278,6 @@
     patch[K.minDate] = dom.minDate.value || '';
     patch[K.maxDate] = dom.maxDate.value || '';
     patch[K.accent] = dom.accent.value;
-    patch[K.applyOnSelect] = dom.applyOnSelect.checked ? 'true' : 'false';
     patch[K.showPresets] = dom.showPresets.checked ? 'true' : 'false';
     patch[K.showDiagnostics] = dom.showDiagnostics.checked ? 'true' : 'false';
 

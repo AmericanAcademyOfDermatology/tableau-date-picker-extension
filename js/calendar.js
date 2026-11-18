@@ -209,6 +209,15 @@
     this.grids.innerHTML = '';
     this.cells = [];
 
+    // Use the same row count for every visible month so the two grids stay the
+    // same height, but take that count from the months actually on screen
+    // rather than always reserving six. Most pairs need five, which is a whole
+    // row of vertical space back.
+    this.rows = 4;
+    for (var r = 0; r < this.opts.months; r++) {
+      this.rows = Math.max(this.rows, this._rowsFor(D.addMonths(this.view, r)));
+    }
+
     for (var i = 0; i < this.opts.months; i++) {
       this.grids.appendChild(this._buildMonth(D.addMonths(this.view, i)));
     }
@@ -220,6 +229,12 @@
       D.compare(D.addMonths(this.view, span), D.startOfMonth(this.opts.max)) >= 0;
 
     this.paint();
+  };
+
+  /** Week rows this month occupies once its leading blank days are counted. */
+  Calendar.prototype._rowsFor = function (monthStart) {
+    var lead = (D.dayOfWeek(monthStart) - this.opts.weekStart + 7) % 7;
+    return Math.ceil((lead + D.daysInMonth(monthStart.y, monthStart.m)) / 7);
   };
 
   Calendar.prototype._buildMonth = function (monthStart) {
@@ -243,9 +258,8 @@
 
     var cursor = D.startOfWeek(monthStart, this.opts.weekStart);
 
-    // Always six rows, so the two months stay the same height and the grid
-    // never jumps as the user pages through months.
-    for (var n = 0; n < 42; n++) {
+    var cells = this.rows * 7;
+    for (var n = 0; n < cells; n++) {
       var outside = cursor.m !== monthStart.m || cursor.y !== monthStart.y;
       var btn = el('button', 'drp-day', String(cursor.d));
       btn.type = 'button';

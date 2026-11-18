@@ -7,124 +7,149 @@
   <link rel="stylesheet" href="css/styles.css">
   <style>
     body { background: #eef1f5; padding: 24px; height: auto; }
-    .demo-wrap {
-      max-width: 760px;
-      margin: 0 auto 20px;
-      background: #fff;
-      border: 1px solid var(--drp-border);
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
-      overflow: hidden;
-    }
-    .demo-zone { height: 470px; resize: both; overflow: hidden; }
     .demo-note {
-      max-width: 760px;
-      margin: 0 auto 16px;
-      font-family: var(--drp-font);
-      font-size: 13px;
-      color: var(--drp-ink-muted);
-      line-height: 1.6;
+      max-width: 820px; margin: 0 auto 16px;
+      font-family: var(--drp-font); font-size: 13px;
+      color: var(--drp-ink-muted); line-height: 1.6;
     }
     .demo-note strong { color: var(--drp-ink); }
     .demo-note code {
-      font-family: Consolas, Menlo, monospace;
-      background: #fff;
-      border: 1px solid var(--drp-border);
-      border-radius: 3px;
-      padding: 0 4px;
+      font-family: Consolas, Menlo, monospace; background: #fff;
+      border: 1px solid var(--drp-border); border-radius: 3px; padding: 0 4px;
+    }
+    .demo-canvas {
+      max-width: 820px; margin: 0 auto; background: #fff;
+      border: 1px solid var(--drp-border); border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08); padding: 14px;
+    }
+    .demo-label {
+      font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--drp-ink-faint); font-weight: 600; margin-bottom: 6px;
+      font-family: var(--drp-font);
+    }
+    /* The dashboard zone, at the size the bar actually needs. */
+    .demo-zone {
+      width: 340px; height: 38px; resize: both; overflow: hidden;
+      border: 1px dashed var(--drp-border-strong); border-radius: 4px;
+    }
+    .demo-filler {
+      margin-top: 14px; height: 150px; border-radius: 6px;
+      background: repeating-linear-gradient(135deg, #f6f8fa, #f6f8fa 10px, #f0f3f6 10px, #f0f3f6 20px);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--drp-ink-faint); font-family: var(--drp-font); font-size: 12px;
+    }
+    /* Stands in for the Tableau dialog, which is painted outside the zone. */
+    .demo-overlay {
+      position: fixed; inset: 0; background: rgba(16, 24, 40, 0.45);
+      display: flex; align-items: center; justify-content: center; z-index: 50;
+    }
+    .demo-overlay[hidden] { display: none; }
+    .demo-dialog {
+      width: 600px; height: 360px; background: #fff; border-radius: 8px;
+      box-shadow: 0 12px 32px rgba(16, 24, 40, 0.3); overflow: hidden;
     }
   </style>
 </head>
 <body>
 
   <p class="demo-note">
-    <strong>Demo mode.</strong> The same UI the Tableau extension renders, with the
-    Extensions API stubbed out. Drag the bottom-right corner of the panel to see how
-    it reflows inside a narrow dashboard zone. The diagnostics strip shows the exact
-    <code>min</code> and <code>max</code> that would be handed to
-    <code>applyRangeFilterAsync</code>.
+    <strong>Demo mode.</strong> The Extensions API is stubbed out. The dashed box is
+    the dashboard zone, drawn at the size the bar actually needs &mdash; drag its
+    corner to see it reflow. Clicking the bar opens the picker in an overlay that
+    stands in for the Tableau dialog, which is painted <em>outside</em> the zone.
+    Append settings as query parameters to reproduce a scenario, for example
+    <code>?drp.showDiagnostics=true&amp;drp.defaultPreset=thisMonth</code>.
   </p>
 
-  <div class="demo-wrap">
+  <div class="demo-canvas">
+    <div class="demo-label">Dashboard zone</div>
     <div class="demo-zone">
-      <div class="drp-shell" id="shell">
-
-        <div class="drp-header">
-          <span class="drp-title" id="headerTitle">Date range</span>
-          <span class="drp-nights" id="summary"></span>
-        </div>
-
-        <div class="drp-notice drp-notice--error" id="setupNotice" hidden>
-          <p id="setupNoticeText"></p>
-          <p><button class="drp-btn" type="button" id="setupConfigureBtn">Open configuration</button></p>
-        </div>
-
-        <div class="drp-body" id="body">
-          <div class="drp-presets" id="presets" role="group" aria-label="Preset ranges">
-            <span class="drp-presets__heading">Quick ranges</span>
-          </div>
-
-          <div class="drp-main">
-            <div class="drp-fields">
-              <div class="drp-field">
-                <label class="drp-field__label" for="startInput">Start</label>
-                <input class="drp-field__input" id="startInput" type="text" autocomplete="off" spellcheck="false">
-              </div>
-              <span class="drp-field__arrow" aria-hidden="true">&rarr;</span>
-              <div class="drp-field">
-                <label class="drp-field__label" for="endInput">End</label>
-                <input class="drp-field__input" id="endInput" type="text" autocomplete="off" spellcheck="false">
-              </div>
-              <span class="drp-nights" id="dayCount"></span>
-            </div>
-
-            <div id="calendar"></div>
-          </div>
-        </div>
-
-        <div class="drp-diagnostics" id="diagnostics">
-          <dl>
-            <dt>Selected days</dt><dd id="diagDays">&mdash;</dd>
-            <dt>Sent as min</dt><dd id="diagMin">&mdash;</dd>
-            <dt>Sent as max</dt><dd id="diagMax">&mdash;</dd>
-            <dt>End-bound rule</dt><dd id="diagPolicy">&mdash;</dd>
-            <dt>Read back from Tableau</dt><dd id="diagReadback">demo mode</dd>
-            <dt>Browser timezone</dt><dd id="diagTz">&mdash;</dd>
-          </dl>
-        </div>
-
-        <div class="drp-footer">
-          <span class="drp-status" id="status"></span>
-          <span class="drp-footer__spacer"></span>
-          <button class="drp-btn drp-btn--ghost" type="button" id="clearBtn">Clear</button>
-          <button class="drp-btn drp-btn--primary" type="button" id="applyBtn">Apply</button>
-        </div>
-
+      <div class="drp-bar" id="bar">
+        <select class="drp-bar__preset" id="barPreset" aria-label="Quick ranges"></select>
+        <button class="drp-bar__open" type="button" id="barOpen">
+          <svg class="drp-bar__icon" viewBox="0 0 16 16" aria-hidden="true" fill="none"
+               stroke="currentColor" stroke-width="1.4">
+            <rect x="1.7" y="3" width="12.6" height="11.3" rx="1.6"/>
+            <path d="M1.7 6.6h12.6M5 1.6v2.6M11 1.6v2.6"/>
+          </svg>
+          <span class="drp-bar__range" id="barRange">&mdash;</span>
+          <span class="drp-bar__caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <span class="drp-bar__status" id="barStatus"></span>
       </div>
     </div>
+
+    <div class="drp-notice drp-notice--error" id="setupNotice" hidden>
+      <p id="setupNoticeText"></p>
+      <p><button class="drp-btn" type="button" id="setupConfigureBtn">Open configuration</button></p>
+    </div>
+
+    <div class="demo-filler">the rest of the dashboard</div>
+  </div>
+
+  <div class="demo-overlay" id="demoOverlay" hidden>
+    <div class="demo-dialog"><div id="demoPicker"></div></div>
   </div>
 
   <script>
     window.DRP_DEMO = true;
     window.DRP_DEMO_SETTINGS = {
-      'drp.showDiagnostics': 'true',
-      'drp.applyOnSelect': 'false',
       'drp.detectedType': 'date-time',
       'drp.fieldName': 'Order Date',
       'drp.defaultPreset': 'last30'
     };
 
     // Any query parameter overrides a setting, so a scenario can be reproduced
-    // from the address bar. For example:
-    //   demo.html?drp.onLoad=default&drp.defaultPreset=thisMonth
-    //            &drp.currentStart=2026-01-05&drp.currentEnd=2026-01-20
+    // from the address bar.
     new URLSearchParams(window.location.search).forEach(function (value, key) {
       window.DRP_DEMO_SETTINGS[key] = value;
     });
+
+    /**
+     * Stands in for Bridge.openPickerDialog. Resolves with the same JSON
+     * payload shape the Tableau dialog returns, or '' when cancelled.
+     */
+    window.DRP_DEMO_OPEN = function (payload) {
+      return new Promise(function (resolve) {
+        var overlay = document.getElementById('demoOverlay');
+        var host = document.getElementById('demoPicker');
+        var raw = window.DRP_DEMO_SETTINGS;
+        var incoming = JSON.parse(payload || '{}');
+        var D = window.DRP.date;
+
+        function finish(value) {
+          overlay.hidden = true;
+          host.innerHTML = '';
+          resolve(value);
+        }
+
+        overlay.hidden = false;
+        new window.DRP.Picker(host, {
+          start: D.fromISO(incoming.start || ''),
+          end: D.fromISO(incoming.end || ''),
+          weekStart: raw['drp.weekStart'] === '1' ? 1 : 0,
+          min: D.fromISO(raw['drp.minDate'] || ''),
+          max: D.fromISO(raw['drp.maxDate'] || ''),
+          dateFormat: raw['drp.dateFormat'] || 'medium',
+          showPresets: raw['drp.showPresets'] !== 'false',
+          diagnostics: raw['drp.showDiagnostics'] === 'true',
+          endPolicy: raw['drp.endPolicy'] || 'auto',
+          detectedType: raw['drp.detectedType'] || '',
+          onCommit: function (range) {
+            finish(JSON.stringify({
+              start: D.toISO(range.start),
+              end: D.toISO(range.end)
+            }));
+          },
+          onCancel: function () { finish(''); }
+        });
+      });
+    };
   </script>
   <script src="js/dateutil.js"></script>
   <script src="js/presets.js"></script>
   <script src="js/calendar.js"></script>
+  <script src="js/picker.js"></script>
   <script src="js/tableau-bridge.js"></script>
   <script src="js/main.js"></script>
 </body>

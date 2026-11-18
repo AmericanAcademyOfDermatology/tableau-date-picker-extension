@@ -1,10 +1,19 @@
 /*!
- * main.js — controller for the extension surface.
+ * main.js — controller for the dashboard bar.
+ *
+ * The bar is all the extension occupies on a dashboard. It shows the range
+ * that is currently applied, offers the quick ranges in a dropdown, and opens
+ * the full calendar in a Tableau dialog, which is sized by the extension and
+ * is not confined to the dashboard zone.
+ *
+ * Because the bar always displays the active range, a dashboard no longer
+ * needs a separate worksheet to tell people which dates are in force.
  *
  * Runs in two modes. Inside a Tableau dashboard it initialises the Extensions
  * API and applies real filters. Opened directly in a browser (demo.html sets
- * window.DRP_DEMO) it renders the same UI against in-memory settings so the
- * interaction can be reviewed without Tableau.
+ * window.DRP_DEMO) it renders the same bar against in-memory settings and
+ * defers to window.DRP_DEMO_OPEN for the picker, so the interaction can be
+ * reviewed without Tableau.
  */
 (function (global) {
   'use strict';
@@ -15,12 +24,11 @@
   var K = Bridge.KEYS;
 
   var dom = {};
-  var calendar = null;
   var config = null;
   var selection = { start: null, end: null };
-  var dirty = false;
-  var lastApplied = null;
+  var lastReadback = '';
   var resizeFrame = 0;
+  var busy = false;
 
   /* ------------------------------------------------------------- startup */
 
@@ -29,8 +37,9 @@
 
     if (global.DRP_DEMO) {
       config = normaliseConfig(Object.assign({}, Bridge.DEFAULTS, global.DRP_DEMO_SETTINGS || {}));
-      buildUi();
-      setStatus('Demo mode. Nothing is sent to Tableau.', 'ok');
+      buildBar();
+      var initial = initialRange();
+      setSelection(initial.start, initial.end);
       return;
     }
 
@@ -40,21 +49,19 @@
         ? Bridge.detectFieldTypeAsync(config.fieldName).then(cacheDetectedType)
         : null;
     }).then(function () {
-      buildUi();
+      buildBar();
       checkSetup();
       Bridge.onDashboardResize(scheduleLayout);
+      var initial = initialRange();
+      setSelection(initial.start, initial.end);
       return applyOnLoad();
-    }).then(function () {
-      return refreshReadback();
     }).catch(function (err) {
       showFatal(Bridge.describeError(err));
     });
   });
 
   function cacheDom() {
-    ['shell', 'body', 'headerTitle', 'summary', 'presets', 'calendar', 'startInput',
-     'endInput', 'dayCount', 'status', 'applyBtn', 'clearBtn', 'diagnostics',
-     'diagDays', 'diagMin', 'diagMax', 'diagPolicy', 'diagReadback', 'diagTz',
+    ['bar', 'barPreset', 'barOpen', 'barRange', 'barStatus',
      'setupNotice', 'setupNoticeText', 'setupConfigureBtn'
     ].forEach(function (id) { dom[id] = document.getElementById(id); });
   }
@@ -70,6 +77,11 @@
       worksheets = [];
     }
 
+    // 'none' was a third opening mode in an earlier build. The picker now
+    // always applies at startup, so a workbook still holding it is read as
+    // the default behaviour rather than silently doing nothing.
+    var onLoad = raw[K.onLoad] === 'last' ? 'last' : 'default';
+
     return {
       targetMode: raw[K.targetMode] || 'filter',
       worksheets: worksheets,
@@ -82,13 +94,12 @@
       weekStart: raw[K.weekStart] === '1' ? 1 : 0,
       dateFormat: raw[K.dateFormat] || 'medium',
       accent: raw[K.accent] || '#1f6feb',
-      applyOnSelect: raw[K.applyOnSelect] !== 'false',
       showPresets: raw[K.showPresets] !== 'false',
       showDiagnostics: raw[K.showDiagnostics] === 'true',
       minDate: D.fromISO(raw[K.minDate] || ''),
       maxDate: D.fromISO(raw[K.maxDate] || ''),
       defaultPreset: raw[K.defaultPreset] || 'last30',
-      onLoad: raw[K.onLoad] || 'default',
+      onLoad: onLoad,
       currentStart: D.fromISO(raw[K.currentStart] || ''),
       currentEnd: D.fromISO(raw[K.currentEnd] || '')
     };
@@ -110,66 +121,126 @@
     };
   }
 
-  /* ------------------------------------------------------------------ ui */
-
-  function buildUi() {
-    applyAccent(config.accent);
-
-    var initial = initialRange();
-    selection.start = initial.start;
-    selection.end = initial.end;
-
-    calendar = new global.DRP.Calendar(dom.calendar, {
-      months: monthsForWidth(),
-      weekStart: config.weekStart,
-      min: config.minDate,
-      max: config.maxDate,
-      start: selection.start,
-      end: selection.end,
-      onChange: onCalendarChange
-    });
-
-    buildPresets();
-    wireInputs();
-
-    dom.presets.classList.toggle('drp-presets--hidden', !config.showPresets);
-    dom.diagnostics.classList.toggle('drp-diagnostics--hidden', !config.showDiagnostics);
-    dom.diagTz.textContent = timezoneLabel();
-    dom.applyBtn.hidden = config.applyOnSelect;
-
-    global.addEventListener('resize', scheduleLayout);
-    if (global.ResizeObserver) {
-      // Tableau resizes the extension iframe without always firing a window
-      // resize event, so observe the surface directly.
-      new global.ResizeObserver(scheduleLayout).observe(dom.shell);
-    }
-    scheduleLayout();
-    syncUi();
-  }
-
   /**
    * The range the extension opens on.
    *
    * 'default' re-resolves the configured preset against today, which is the
    * point of a relative range such as "This month": a workbook opened in
-   * October must show October, not whatever month it was published in. The
-   * saved range is deliberately ignored in that mode.
+   * October must show October, not whatever month it was published in.
    *
    * 'last' restores the range that was applied when the workbook was last
    * saved, falling back to the default preset the very first time.
-   *
-   * 'none' shows the saved range without touching the workbook's own filters.
    */
   function initialRange() {
     var preset = Presets.resolve(config.defaultPreset, presetOptions()) ||
       Presets.resolve('last30', presetOptions());
 
     if (config.onLoad === 'default') return preset;
-
     if (config.currentStart && config.currentEnd) {
       return { start: config.currentStart, end: config.currentEnd };
     }
     return preset;
+  }
+
+  /* ----------------------------------------------------------------- bar */
+
+  function buildBar() {
+    applyAccent(config.accent);
+
+    dom.barPreset.innerHTML = '';
+    dom.barPreset.appendChild(option('', 'Custom range'));
+    Presets.list.forEach(function (p) {
+      dom.barPreset.appendChild(option(p.id, p.label));
+    });
+    dom.barPreset.hidden = !config.showPresets;
+
+    dom.barPreset.addEventListener('change', function () {
+      if (!dom.barPreset.value) {
+        openPicker();
+        return;
+      }
+      var r = Presets.resolve(dom.barPreset.value, presetOptions());
+      if (!r) return;
+      setSelection(r.start, r.end);
+      apply();
+    });
+
+    dom.barOpen.addEventListener('click', function () { openPicker(); });
+    dom.setupConfigureBtn.addEventListener('click', function () { openConfigure(); });
+
+    global.addEventListener('resize', scheduleLayout);
+    if (global.ResizeObserver) {
+      // Tableau resizes the extension iframe without always firing a window
+      // resize event, so observe the surface directly.
+      new global.ResizeObserver(scheduleLayout).observe(dom.bar);
+    }
+    scheduleLayout();
+  }
+
+  function option(value, label) {
+    var o = document.createElement('option');
+    o.value = value;
+    o.textContent = label;
+    return o;
+  }
+
+  function setSelection(start, end) {
+    selection.start = start || null;
+    selection.end = end || null;
+    syncBar();
+  }
+
+  function syncBar() {
+    var s = selection.start, e = selection.end;
+
+    if (s && e) {
+      dom.barRange.textContent = formatRange(s, e);
+      dom.barPreset.value = Presets.match(s, e, presetOptions()) || '';
+    } else {
+      dom.barRange.textContent = 'Select a date range';
+      dom.barPreset.value = '';
+    }
+
+    dom.barOpen.title = describeTooltip();
+  }
+
+  /**
+   * Space on the bar is the scarcest resource on the dashboard, so a range
+   * inside one year prints the year once: "Oct 20 – Nov 18, 2026". ISO is left
+   * alone, because a half-written ISO date is worse than a long one.
+   */
+  function formatRange(s, e) {
+    var sep = '  –  ';
+    var full = D.format(s, config.dateFormat) + sep + D.format(e, config.dateFormat);
+    if (config.dateFormat === 'iso' || s.y !== e.y) return full;
+
+    var startText = D.format(s, config.dateFormat);
+    var trimmed = startText
+      .replace(new RegExp(',?\\s*' + s.y + '\\s*$'), '')   // "Oct 20, 2026" -> "Oct 20"
+      .replace(new RegExp('[\\/.-]' + s.y + '\\s*$'), ''); // "10/20/2026"   -> "10/20"
+
+    return (trimmed && trimmed !== startText ? trimmed : startText) + sep +
+      D.format(e, config.dateFormat);
+  }
+
+  /**
+   * The bar is narrow, so the detail that used to sit in a diagnostics strip
+   * lives in its tooltip instead.
+   */
+  function describeTooltip() {
+    var s = selection.start, e = selection.end;
+    if (!s || !e) return 'Open the date range picker';
+
+    var policy = Bridge.resolveEndPolicy(config.endPolicy, config.detectedType);
+    var bounds = D.boundsFor(s, e, policy);
+    var lines = [
+      D.toISO(s) + ' through ' + D.toISO(e),
+      'min ' + bounds.min.toISOString(),
+      'max ' + bounds.max.toISOString()
+    ];
+    if (config.showDiagnostics && lastReadback) lines.push('read back ' + lastReadback);
+    lines.push('Click to change');
+    return lines.join('\n');
   }
 
   function applyAccent(hex) {
@@ -190,108 +261,45 @@
     return 'rgb(' + parts.join(',') + ')';
   }
 
-  function buildPresets() {
-    Array.prototype.slice.call(dom.presets.querySelectorAll('.drp-preset'))
-      .forEach(function (n) { n.remove(); });
+  /* -------------------------------------------------------------- picker */
 
-    Presets.list.forEach(function (p) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'drp-preset';
-      btn.textContent = p.label;
-      btn.setAttribute('data-preset', p.id);
-      btn.setAttribute('aria-pressed', 'false');
-      btn.addEventListener('click', function () {
-        var r = Presets.resolve(p.id, presetOptions());
-        if (!r) return;
-        setSelection(r.start, r.end, { fromUser: true });
-      });
-      dom.presets.appendChild(btn);
-    });
-  }
+  function openPicker() {
+    if (busy) return;
+    busy = true;
 
-  function wireInputs() {
-    [['startInput', 'start'], ['endInput', 'end']].forEach(function (pair) {
-      var input = dom[pair[0]];
-      var which = pair[1];
-      input.addEventListener('change', function () { commitInput(which, input); });
-      input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); commitInput(which, input); }
-      });
+    var payload = JSON.stringify({
+      start: selection.start ? D.toISO(selection.start) : '',
+      end: selection.end ? D.toISO(selection.end) : ''
     });
 
-    dom.applyBtn.addEventListener('click', function () { apply(); });
-    dom.clearBtn.addEventListener('click', function () { clearRange(); });
-    dom.setupConfigureBtn.addEventListener('click', function () { openConfigure(); });
-  }
+    var opener = global.DRP_DEMO && global.DRP_DEMO_OPEN
+      ? global.DRP_DEMO_OPEN(payload)
+      : Bridge.openPickerDialog(payload);
 
-  function commitInput(which, input) {
-    var parsed = D.parseFlexible(input.value, config.dateFormat);
-    if (!parsed) {
-      input.classList.add('drp-field__input--invalid');
-      setStatus('Could not read "' + input.value + '" as a date.', 'error');
-      return;
-    }
-    input.classList.remove('drp-field__input--invalid');
-    parsed = D.clamp(parsed, config.minDate, config.maxDate);
+    opener.then(function (result) {
+      busy = false;
+      syncBar();                       // restore the preset dropdown if cancelled
+      if (!result) return;             // cancelled
 
-    var start = which === 'start' ? parsed : selection.start;
-    var end = which === 'end' ? parsed : selection.end;
-    if (start && end && D.compare(start, end) > 0) {
-      // Typing an end before the start collapses the range onto that day
-      // rather than silently swapping the two values behind the user's back.
-      if (which === 'end') start = end; else end = start;
-    }
-    setSelection(start, end, { fromUser: true });
-  }
+      var chosen;
+      try {
+        chosen = JSON.parse(result);
+      } catch (err) {
+        return;
+      }
+      var start = D.fromISO(chosen.start || '');
+      var end = D.fromISO(chosen.end || '');
+      if (!start || !end) return;
 
-  function onCalendarChange(range, committed) {
-    selection.start = range.start;
-    selection.end = range.end;
-    dirty = true;
-    syncUi();
-    if (committed && config.applyOnSelect) apply();
-  }
-
-  function setSelection(start, end, opts) {
-    selection.start = start || null;
-    selection.end = end || null;
-    dirty = true;
-    if (calendar) calendar.setRange(selection.start, selection.end);
-    syncUi();
-    if (opts && opts.fromUser && config.applyOnSelect && selection.start && selection.end) {
-      apply();
-    }
-  }
-
-  function syncUi() {
-    var s = selection.start, e = selection.end;
-
-    dom.startInput.value = s ? D.format(s, config.dateFormat) : '';
-    dom.endInput.value = e ? D.format(e, config.dateFormat) : '';
-    dom.startInput.classList.remove('drp-field__input--invalid');
-    dom.endInput.classList.remove('drp-field__input--invalid');
-
-    if (s && e) {
-      var n = D.diffDays(s, e) + 1;
-      dom.dayCount.textContent = n + (n === 1 ? ' day' : ' days');
-      dom.summary.textContent = D.format(s, config.dateFormat) + '  –  ' +
-        D.format(e, config.dateFormat);
-    } else if (s) {
-      dom.dayCount.textContent = 'Pick an end date';
-      dom.summary.textContent = '';
-    } else {
-      dom.dayCount.textContent = '';
-      dom.summary.textContent = '';
-    }
-
-    var activeId = (s && e) ? Presets.match(s, e, presetOptions()) : null;
-    Array.prototype.forEach.call(dom.presets.querySelectorAll('.drp-preset'), function (btn) {
-      btn.setAttribute('aria-pressed', btn.getAttribute('data-preset') === activeId ? 'true' : 'false');
+      setSelection(start, end);
+      return apply();
+    }).catch(function (err) {
+      busy = false;
+      syncBar();
+      if (!Bridge.isDialogDismissal(err)) {
+        setStatus(Bridge.describeError(err), 'error');
+      }
     });
-
-    dom.applyBtn.disabled = !(s && e) || !dirty;
-    updateDiagnostics();
   }
 
   /* ---------------------------------------------------------------- apply */
@@ -308,12 +316,8 @@
     if (!selection.start || !selection.end) return Promise.resolve();
 
     if (!Bridge.isAvailable()) {
-      dirty = false;
-      lastApplied = D.boundsFor(selection.start, selection.end,
-        Bridge.resolveEndPolicy(config.endPolicy, config.detectedType));
       setStatus('Demo mode: would filter ' + D.toISO(selection.start) +
-        ' through ' + D.toISO(selection.end) + '.', 'ok');
-      syncUi();
+        ' through ' + D.toISO(selection.end) + '.', '');
       return Promise.resolve();
     }
 
@@ -322,13 +326,9 @@
       return Promise.resolve();
     }
 
-    dom.applyBtn.disabled = true;
-    setStatus('Applying…');
+    setStatus('Applying…', '');
 
     return Bridge.applyRangeAsync(selection.start, selection.end, config).then(function (result) {
-      lastApplied = result.bounds;
-      dirty = false;
-
       if (persist) {
         var patch = {};
         patch[K.currentStart] = D.toISO(selection.start);
@@ -339,28 +339,22 @@
       if (result.applied.errors.length) {
         setStatus(result.applied.errors.join(' · '), 'error');
       } else {
-        setStatus(describeSuccess(result), 'ok');
+        setStatus('', '');
       }
-      syncUi();
       return refreshReadback();
     }).catch(function (err) {
       setStatus(Bridge.describeError(err), 'error');
-      syncUi();
     });
   }
 
   /**
    * Push the opening range into the workbook.
    *
-   * Without this the extension only *displayed* a range at startup while the
-   * worksheet kept whatever filter was saved with the workbook, so a dashboard
-   * always opened on the dates it was published with.
-   *
-   * A failure here is reported in the status line rather than thrown, because
-   * a picker that cannot reach one worksheet should still be usable.
+   * Without this the bar would only *display* a range while the worksheet kept
+   * whatever filter was saved with the workbook, so a dashboard would always
+   * open on the dates it was published with.
    */
   function applyOnLoad() {
-    if (config.onLoad === 'none') return Promise.resolve();
     if (!Bridge.isAvailable()) return Promise.resolve();
     if (!isConfigured()) return Promise.resolve();
     if (!selection.start || !selection.end) return Promise.resolve();
@@ -371,88 +365,15 @@
     });
   }
 
-  function describeSuccess(result) {
-    var bits = [];
-    if (result.applied.filter.length) {
-      bits.push('Filtered ' + result.applied.filter.length +
-        (result.applied.filter.length === 1 ? ' sheet' : ' sheets'));
-    }
-    if (result.applied.parameters.length) {
-      bits.push('set ' + result.applied.parameters.join(' and '));
-    }
-    if (!bits.length) return 'Nothing to apply. Check the configuration.';
-    return bits.join(', ') + '.';
-  }
-
-  function clearRange() {
-    if (!Bridge.isAvailable()) {
-      setSelection(null, null, {});
-      setStatus('Demo mode: selection cleared.', 'ok');
-      return;
-    }
-    setStatus('Clearing…');
-    Bridge.clearRangeAsync(config).then(function () {
-      selection.start = null;
-      selection.end = null;
-      lastApplied = null;
-      dirty = false;
-      if (calendar) calendar.setRange(null, null, { keepView: true });
-      var patch = {};
-      patch[K.currentStart] = '';
-      patch[K.currentEnd] = '';
-      Bridge.writeSettings(patch);
-      setStatus('Filter cleared.', 'ok');
-      syncUi();
-      return refreshReadback();
-    }).catch(function (err) {
-      setStatus(Bridge.describeError(err), 'error');
-    });
-  }
-
-  /* ---------------------------------------------------------- diagnostics */
-
-  function updateDiagnostics() {
-    if (!config || !config.showDiagnostics) return;
-    var s = selection.start, e = selection.end;
-    dom.diagDays.textContent = (s && e)
-      ? D.toISO(s) + ' → ' + D.toISO(e)
-      : '—';
-
-    var policy = Bridge.resolveEndPolicy(config.endPolicy, config.detectedType);
-    var bounds = (s && e) ? D.boundsFor(s, e, policy) : null;
-    dom.diagMin.textContent = bounds ? bounds.min.toISOString() : '—';
-    dom.diagMax.textContent = bounds ? bounds.max.toISOString() : '—';
-    dom.diagPolicy.textContent = policy === 'midnight'
-      ? 'midnight (field reported as ' + (config.detectedType || 'date') + ')'
-      : 'end of day (field reported as ' + (config.detectedType || 'unknown') + ')';
-  }
-
   function refreshReadback() {
     if (!config.showDiagnostics || !Bridge.isAvailable()) return Promise.resolve();
     return Bridge.readBackAsync(config).then(function (actual) {
-      if (!actual || !actual.min || !actual.max) {
-        dom.diagReadback.textContent = 'no range filter found';
-        return;
-      }
-      dom.diagReadback.textContent =
-        actual.min.toISOString() + '  →  ' + actual.max.toISOString() +
-        '   (' + actual.worksheet + ')';
+      lastReadback = (actual && actual.min && actual.max)
+        ? actual.min.toISOString() + ' → ' + actual.max.toISOString() +
+          ' (' + actual.worksheet + ')'
+        : 'no range filter found';
+      syncBar();
     });
-  }
-
-  function timezoneLabel() {
-    var offsetMinutes = -new Date().getTimezoneOffset();
-    var sign = offsetMinutes < 0 ? '-' : '+';
-    var abs = Math.abs(offsetMinutes);
-    var hh = String(Math.floor(abs / 60));
-    var mm = String(abs % 60);
-    while (hh.length < 2) hh = '0' + hh;
-    while (mm.length < 2) mm = '0' + mm;
-    var name = '';
-    try {
-      name = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    } catch (e) { /* older engines */ }
-    return (name ? name + ' ' : '') + 'UTC' + sign + hh + ':' + mm;
   }
 
   /* ---------------------------------------------------------- setup state */
@@ -468,51 +389,31 @@
   function checkSetup() {
     if (isConfigured()) {
       dom.setupNotice.hidden = true;
+      dom.bar.hidden = false;
       return;
     }
     dom.setupNotice.hidden = false;
+    dom.bar.hidden = true;
     dom.setupNoticeText.textContent = config.targetMode === 'filter'
       ? 'Choose the date field this picker should filter.'
       : 'Choose the start and end date parameters this picker should set.';
   }
 
   function showFatal(message) {
-    dom.body.hidden = true;
-    dom.diagnostics.hidden = true;
+    dom.bar.hidden = true;
     dom.setupNotice.hidden = false;
     dom.setupNoticeText.textContent = message;
     dom.setupConfigureBtn.hidden = true;
-    dom.applyBtn.hidden = true;
-    dom.clearBtn.hidden = true;
   }
 
   function setStatus(message, kind) {
-    dom.status.textContent = message || '';
-    dom.status.className = 'drp-status' + (kind ? ' drp-status--' + kind : '');
+    dom.barStatus.textContent = message || '';
+    // The slot is narrow and ellipsises, so the full text stays reachable.
+    dom.barStatus.title = message || '';
+    dom.barStatus.className = 'drp-bar__status' + (kind ? ' drp-bar__status--' + kind : '');
   }
 
   /* --------------------------------------------------------------- layout */
-
-  /**
-   * Measure the extension surface itself. Inside Tableau the shell fills the
-   * iframe, so this matches the dashboard zone; in demo.html it matches the
-   * resizable preview box.
-   */
-  function shellSize() {
-    var rect = dom.shell.getBoundingClientRect();
-    return {
-      w: Math.round(rect.width) || document.documentElement.clientWidth,
-      h: Math.round(rect.height) || document.documentElement.clientHeight
-    };
-  }
-
-  function monthsForWidth() {
-    // Two months need roughly 420px of calendar once the presets rail and the
-    // padding are accounted for. Below that the zone gets a single month
-    // instead of a horizontal scrollbar.
-    var railed = config && config.showPresets ? 150 : 0;
-    return (shellSize().w - railed) >= 420 ? 2 : 1;
-  }
 
   function scheduleLayout() {
     if (resizeFrame) return;
@@ -523,38 +424,14 @@
   }
 
   function relayout() {
-    var size = shellSize();
-    dom.shell.classList.toggle('drp-shell--compact', size.w < 640);
-    dom.shell.classList.toggle('drp-shell--tiny', size.w < 420);
-    dom.shell.classList.toggle('drp-shell--short', size.h < 470);
-    if (calendar) calendar.setMonths(monthsForWidth());
-    fitDayRows();
-  }
+    var rect = dom.bar.getBoundingClientRect();
+    var width = Math.round(rect.width) || document.documentElement.clientWidth;
+    var height = Math.round(rect.height) || document.documentElement.clientHeight;
 
-  /**
-   * Size the six week rows to the height that is actually left over, so the
-   * last week of the month is never cut off and the panel never scrolls.
-   */
-  function fitDayRows() {
-    var main = dom.calendar.parentElement;
-    if (!main) return;
-
-    var chrome = 0;
-    Array.prototype.forEach.call(main.children, function (child) {
-      if (child !== dom.calendar) chrome += child.offsetHeight;
-    });
-    var gaps = Math.max(0, main.children.length - 1) * 10;
-
-    var caption = dom.calendar.querySelector('.drp-cal__caption');
-    var weekdays = dom.calendar.querySelector('.drp-cal__weekdays');
-    var calChrome = (caption ? caption.offsetHeight : 26) +
-                    (weekdays ? weekdays.offsetHeight : 18);
-
-    var available = main.clientHeight - chrome - gaps - calChrome;
-    var perRow = Math.floor((available - 5) / 6);   // 1px grid gap per row
-    perRow = Math.max(18, Math.min(30, perRow));
-
-    document.documentElement.style.setProperty('--drp-day-h', perRow + 'px');
+    // Two controls on one line need roughly 300px. Below that, stack them,
+    // which a tall-but-narrow zone can still accommodate.
+    var stack = config.showPresets && width < 300 && height >= 62;
+    dom.bar.classList.toggle('drp-bar--stacked', stack);
   }
 
   /* ------------------------------------------------------------ configure */
@@ -563,10 +440,7 @@
     return Bridge.openConfigureDialog('open').then(function () {
       reloadConfig();
     }).catch(function (err) {
-      // Tableau rejects with DialogClosedByUser when the user cancels.
-      var code = err && err.errorCode;
-      if (code && String(code).indexOf('dialog-closed-by-user') < 0 &&
-          String(code).toLowerCase().indexOf('dialogclosed') < 0) {
+      if (!Bridge.isDialogDismissal(err)) {
         setStatus(Bridge.describeError(err), 'error');
       }
       reloadConfig();
@@ -578,14 +452,9 @@
     config = normaliseConfig(Bridge.readSettings());
 
     applyAccent(config.accent);
-    calendar.setWeekStart(config.weekStart);
-    calendar.setBounds(config.minDate, config.maxDate);
-    dom.presets.classList.toggle('drp-presets--hidden', !config.showPresets);
-    dom.diagnostics.classList.toggle('drp-diagnostics--hidden', !config.showDiagnostics);
-    dom.applyBtn.hidden = config.applyOnSelect;
+    dom.barPreset.hidden = !config.showPresets;
     checkSetup();
     relayout();
-    dirty = true;
 
     // Changing the opening behaviour should be visible straight away rather
     // than only on the next open, otherwise there is no way to tell whether
@@ -597,14 +466,13 @@
     if (openingChanged && config.onLoad === 'default') {
       var next = initialRange();
       if (next) {
-        setSelection(next.start, next.end, {});
-        syncUi();
-        applyOnLoad();
+        setSelection(next.start, next.end);
+        apply();
         return;
       }
     }
 
-    syncUi();
+    syncBar();
     refreshReadback();
   }
 })(typeof window !== 'undefined' ? window : globalThis);

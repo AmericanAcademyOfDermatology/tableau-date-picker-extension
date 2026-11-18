@@ -1,6 +1,10 @@
 /*!
- * styles.css — shared by the extension surface, the configure dialog and the
- * standalone demo page.
+ * styles.css — shared by the dashboard bar, the picker dialog, the configure
+ * dialog and the demo page.
+ *
+ * Layout model: the extension's dashboard zone holds only a compact bar. The
+ * calendar lives in a Tableau dialog, which is sized by the extension and is
+ * not confined to the zone. See README "Layout".
  */
 
 :root {
@@ -16,7 +20,7 @@
   --drp-border-strong: #c3ccd6;
   --drp-danger: #b42318;
   --drp-ok: #067647;
-  --drp-radius: 6px;
+  --drp-radius: 5px;
   --drp-font: "Benton Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -37,184 +41,237 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-button {
+button, input, select {
   font-family: inherit;
   font-size: inherit;
-  cursor: pointer;
 }
 
+button { cursor: pointer; }
 button:disabled { cursor: default; }
 
-/* ------------------------------------------------------------------ shell */
+/* ================================================================== bar ===
+   The only thing that occupies dashboard space. It doubles as the readout of
+   the active range, which is why it is never collapsed to an icon.
+   ========================================================================= */
 
-.drp-shell {
+.drp-bar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   height: 100%;
   min-height: 0;
-  padding: 10px 12px;
-  gap: 10px;
+  padding: 4px 6px;
   overflow: hidden;
 }
 
-.drp-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  flex: 0 0 auto;
-}
-
-.drp-title {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--drp-ink-muted);
-  margin-right: auto;
-}
-
-.drp-body {
-  display: flex;
-  gap: 12px;
-  min-height: 0;
-  flex: 1 1 auto;
-}
-
-.drp-main {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow: auto;
-}
-
-.drp-footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  border-top: 1px solid var(--drp-border);
-  padding-top: 9px;
-  flex: 0 0 auto;
-}
-
-.drp-footer__spacer { margin-left: auto; }
-
-/* --------------------------------------------------------------- presets */
-
-.drp-presets {
-  flex: 0 0 132px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-  padding-right: 6px;
-  border-right: 1px solid var(--drp-border);
-}
-
-.drp-presets__heading {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--drp-ink-faint);
-  padding: 4px 6px 2px;
-  flex: 0 0 auto;
-}
-
-.drp-preset {
-  /* flex-shrink must stay 0, otherwise a short extension zone squashes every
-     row to zero height instead of scrolling the rail. */
-  flex: 0 0 auto;
-  text-align: left;
-  border: 0;
-  background: transparent;
+.drp-bar__preset {
+  /* A select takes its intrinsic width from its widest option, so a long
+     preset name would quietly steal space from the range readout. Capping it
+     costs nothing: the dropdown still shows every label in full when open. */
+  flex: 0 1 auto;
+  min-width: 72px;
+  max-width: 130px;
+  border: 1px solid var(--drp-border-strong);
   border-radius: var(--drp-radius);
-  padding: 5px 8px;
+  background: var(--drp-surface);
   color: var(--drp-ink);
+  padding: 4px 6px;
+  height: 28px;
+}
+
+.drp-bar__preset:focus-visible {
+  outline: 2px solid var(--drp-accent);
+  outline-offset: -1px;
+}
+
+.drp-bar__open {
+  /* The range readout outranks everything else on the bar, so it keeps a
+     floor while the status text beside it shrinks and ellipsises. */
+  flex: 1 1 auto;
+  min-width: 150px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--drp-border-strong);
+  border-radius: var(--drp-radius);
+  background: var(--drp-surface);
+  color: var(--drp-ink);
+  text-align: left;
+}
+
+.drp-bar__open:hover:not(:disabled) {
+  border-color: var(--drp-accent);
+  background: var(--drp-accent-soft);
+}
+
+.drp-bar__open:focus-visible {
+  outline: 2px solid var(--drp-accent);
+  outline-offset: 1px;
+}
+
+.drp-bar__icon {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  color: var(--drp-ink-muted);
+}
+
+.drp-bar__range {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.drp-bar__caret {
+  flex: 0 0 auto;
+  color: var(--drp-ink-faint);
+  font-size: 10px;
+}
+
+/* Stack onto two lines in a zone too narrow for one. */
+.drp-bar--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.drp-bar--stacked .drp-bar__preset { max-width: none; }
+
+.drp-bar__status {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 38%;
+  font-size: 11px;
+  color: var(--drp-ink-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.drp-preset:hover { background: var(--drp-surface-alt); }
+/* Usually empty. Claiming no width when it is keeps the range text intact. */
+.drp-bar__status:empty { display: none; }
 
-.drp-preset[aria-pressed="true"] {
-  background: var(--drp-accent-soft);
-  color: var(--drp-accent);
-  font-weight: 600;
+.drp-bar__status--error { color: var(--drp-danger); }
+
+/* =============================================================== picker ===
+   Mounted inside the Tableau dialog, and inside an overlay on the demo page.
+   ========================================================================= */
+
+.drp-picker {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--drp-surface);
 }
 
-.drp-presets--hidden { display: none; }
-
-/* --------------------------------------------------------------- inputs */
-
-.drp-fields {
+/* The header is the summary: the two dates are the editable fields, so there
+   is no separate labelled input row. */
+.drp-picker__head {
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
   flex-wrap: wrap;
+}
+
+.drp-picker__preset {
+  flex: 0 0 auto;
+  max-width: 160px;
+  border: 1px solid var(--drp-border-strong);
+  border-radius: var(--drp-radius);
+  background: var(--drp-surface);
+  color: var(--drp-ink);
+  padding: 4px 6px;
+  height: 28px;
+}
+
+.drp-picker__dates {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex: 0 0 auto;
 }
 
-.drp-field {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.drp-field__label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--drp-ink-faint);
-}
-
-.drp-field__input {
-  font: inherit;
-  color: var(--drp-ink);
-  background: var(--drp-surface);
-  border: 1px solid var(--drp-border-strong);
+.drp-picker__date {
+  width: 108px;
+  height: 28px;
+  border: 1px solid transparent;
   border-radius: var(--drp-radius);
-  padding: 5px 8px;
-  width: 132px;
+  background: var(--drp-surface-alt);
+  color: var(--drp-ink);
+  font-weight: 600;
+  padding: 0 7px;
 }
 
-.drp-field__input:focus {
+.drp-picker__date:hover { border-color: var(--drp-border-strong); }
+
+.drp-picker__date:focus {
   outline: 2px solid var(--drp-accent);
   outline-offset: -1px;
-  border-color: var(--drp-accent);
+  background: var(--drp-surface);
 }
 
-.drp-field__input--invalid {
-  border-color: var(--drp-danger);
+.drp-picker__date--active {
+  background: var(--drp-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--drp-accent-edge);
+}
+
+.drp-picker__date--invalid {
   background: #fff5f4;
+  box-shadow: inset 0 0 0 1px var(--drp-danger);
 }
 
-.drp-field__arrow {
-  color: var(--drp-ink-faint);
-  padding-bottom: 7px;
-}
+.drp-picker__arrow { color: var(--drp-ink-faint); }
 
-.drp-nights {
-  font-size: 12px;
+.drp-picker__count {
   color: var(--drp-ink-muted);
-  padding-bottom: 7px;
+  font-size: 12px;
+  margin-left: auto;
 }
 
-/* -------------------------------------------------------------- calendar */
+.drp-picker__cal {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  /* Centred, not top-aligned: the row count varies between five and six as
+     the user pages, and centring absorbs that without the grid jumping. */
+  align-items: center;
+  justify-content: center;
+}
 
-.drp-cal { min-width: 0; }
+.drp-picker__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  border-top: 1px solid var(--drp-border);
+  padding-top: 6px;
+}
+
+.drp-picker__hint {
+  font-size: 11px;
+  color: var(--drp-ink-muted);
+  margin-right: auto;
+}
+
+/* ============================================================= calendar ===
+   Unchanged in behaviour; only the spacing is tighter than before.
+   ========================================================================= */
+
+.drp-cal { min-width: 0; width: 100%; }
 
 .drp-cal__nav {
   display: flex;
   align-items: flex-start;
-  gap: 4px;
+  gap: 2px;
 }
 
 .drp-cal__navbtn {
@@ -222,12 +279,13 @@ button:disabled { cursor: default; }
   border: 1px solid transparent;
   background: transparent;
   border-radius: var(--drp-radius);
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   line-height: 1;
-  font-size: 18px;
+  font-size: 17px;
   color: var(--drp-ink-muted);
-  margin-top: 2px;
+  margin-top: 1px;
+  padding: 0;
 }
 
 .drp-cal__navbtn:hover:not(:disabled) {
@@ -240,19 +298,19 @@ button:disabled { cursor: default; }
 
 .drp-cal__months {
   display: flex;
-  gap: 18px;
+  gap: 14px;
   flex: 1 1 auto;
   justify-content: center;
   min-width: 0;
 }
 
-.drp-cal__month { flex: 1 1 0; min-width: 0; max-width: 232px; }
+.drp-cal__month { flex: 1 1 0; min-width: 0; max-width: 224px; }
 
 .drp-cal__caption {
   text-align: center;
   font-weight: 600;
-  font-size: 13px;
-  padding: 4px 0 8px;
+  font-size: 12px;
+  padding: 1px 0 5px;
 }
 
 .drp-cal__weekdays,
@@ -269,7 +327,7 @@ button:disabled { cursor: default; }
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--drp-ink-faint);
-  padding-bottom: 4px;
+  padding-bottom: 3px;
   text-decoration: none;
   border: 0;
 }
@@ -281,10 +339,9 @@ button:disabled { cursor: default; }
   color: var(--drp-ink);
   font-size: 12px;
   line-height: 1;
-  /* A measured row height, not an aspect ratio. relayout() in main.js sets
-     --drp-day-h from the space actually left over, so all six week rows fit
-     whatever zone the dashboard author draws. */
-  height: var(--drp-day-h, 28px);
+  /* A measured row height. The host sets --drp-day-h from the space actually
+     left over, so every week row fits whatever surface the picker is in. */
+  height: var(--drp-day-h, 26px);
   padding: 0;
   border-radius: var(--drp-radius);
   display: flex;
@@ -315,7 +372,7 @@ button:disabled { cursor: default; }
 .drp-day--today::after {
   content: "";
   position: absolute;
-  bottom: 3px;
+  bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
   width: 3px;
@@ -324,7 +381,7 @@ button:disabled { cursor: default; }
   background: currentColor;
 }
 
-/* The connected bar. Endpoints are solid; the span between them is tinted and
+/* The connected bar: endpoints are solid, the span between them is tinted and
    squared off so the run reads as one continuous selection. */
 .drp-day--in-range {
   background: var(--drp-accent-soft);
@@ -352,19 +409,18 @@ button:disabled { cursor: default; }
 
 .drp-day--range-single { border-radius: 999px; }
 
-/* --------------------------------------------------------------- buttons */
+/* ============================================================== buttons ===*/
 
 .drp-btn {
   border: 1px solid var(--drp-border-strong);
   background: var(--drp-surface);
   color: var(--drp-ink);
   border-radius: var(--drp-radius);
-  padding: 6px 12px;
+  padding: 5px 11px;
   font-weight: 500;
 }
 
 .drp-btn:hover:not(:disabled) { background: var(--drp-surface-alt); }
-
 .drp-btn:disabled { opacity: 0.5; }
 
 .drp-btn--primary {
@@ -385,12 +441,12 @@ button:disabled { cursor: default; }
   color: var(--drp-ink);
 }
 
-/* ---------------------------------------------------------- status panes */
+/* ========================================================= status panes ===*/
 
 .drp-status {
   font-size: 12px;
   color: var(--drp-ink-muted);
-  min-height: 16px;
+  min-height: 15px;
 }
 
 .drp-status--error { color: var(--drp-danger); }
@@ -398,14 +454,14 @@ button:disabled { cursor: default; }
 
 .drp-diagnostics {
   flex: 0 0 auto;
-  max-height: 120px;
+  max-height: 104px;
   overflow: auto;
   border: 1px solid var(--drp-border);
   border-radius: var(--drp-radius);
   background: var(--drp-surface-alt);
-  padding: 8px 10px;
+  padding: 6px 8px;
   font-size: 11px;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--drp-ink-muted);
 }
 
@@ -413,22 +469,21 @@ button:disabled { cursor: default; }
   margin: 0;
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 2px 10px;
+  gap: 1px 10px;
 }
 
 .drp-diagnostics dt { font-weight: 600; color: var(--drp-ink); }
 .drp-diagnostics dd { margin: 0; font-family: Consolas, "SF Mono", Menlo, monospace; }
-
-.drp-diagnostics--hidden { display: none; }
 
 .drp-notice {
   border: 1px solid var(--drp-border);
   border-left: 3px solid var(--drp-accent);
   border-radius: var(--drp-radius);
   background: var(--drp-surface-alt);
-  padding: 10px 12px;
+  padding: 8px 10px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.45;
+  margin: 4px;
 }
 
 .drp-notice--error { border-left-color: var(--drp-danger); }
@@ -436,19 +491,7 @@ button:disabled { cursor: default; }
 .drp-notice p { margin: 0 0 6px; }
 .drp-notice p:last-child { margin-bottom: 0; }
 
-/* ---------------------------------------------------------- compact mode */
-
-.drp-shell--compact .drp-presets { flex-basis: 110px; }
-.drp-shell--compact .drp-cal__months { gap: 10px; }
-.drp-shell--compact .drp-cal__caption { padding: 2px 0 6px; }
-.drp-shell--short .drp-day { font-size: 11px; }
-.drp-shell--short .drp-cal__caption { padding: 1px 0 4px; font-size: 12px; }
-.drp-shell--short .drp-cal__weekday { padding-bottom: 2px; }
-
-.drp-shell--tiny .drp-presets { display: none; }
-.drp-shell--tiny .drp-title { display: none; }
-
-/* --------------------------------------------------------------- dialog */
+/* =============================================== configure dialog chrome ===*/
 
 .drp-dialog {
   display: flex;
@@ -466,10 +509,7 @@ button:disabled { cursor: default; }
   padding-right: 4px;
 }
 
-.drp-dialog h1 {
-  font-size: 15px;
-  margin: 0;
-}
+.drp-dialog h1 { font-size: 15px; margin: 0; }
 
 .drp-dialog h2 {
   font-size: 11px;
@@ -492,10 +532,7 @@ button:disabled { cursor: default; }
   margin-bottom: 9px;
 }
 
-.drp-row > label {
-  padding-top: 5px;
-  color: var(--drp-ink-muted);
-}
+.drp-row > label { padding-top: 5px; color: var(--drp-ink-muted); }
 
 .drp-row select,
 .drp-row input[type="text"],
@@ -511,7 +548,6 @@ button:disabled { cursor: default; }
 }
 
 .drp-row input[type="color"] { padding: 2px; height: 28px; }
-
 .drp-row select[multiple] { height: 96px; }
 
 .drp-hint {
@@ -538,7 +574,7 @@ button:disabled { cursor: default; }
   padding-top: 11px;
 }
 
-.drp-dialog__actions .drp-footer__spacer { margin-right: auto; }
+.drp-dialog__actions .drp-spacer { margin-right: auto; }
 
 .drp-policy-callout {
   background: var(--drp-accent-soft);

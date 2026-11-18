@@ -23,7 +23,6 @@
     weekStart: 'drp.weekStart',
     dateFormat: 'drp.dateFormat',
     accent: 'drp.accent',
-    applyOnSelect: 'drp.applyOnSelect',
     showPresets: 'drp.showPresets',
     showDiagnostics: 'drp.showDiagnostics',
     minDate: 'drp.minDate',
@@ -46,7 +45,6 @@
   DEFAULTS[SETTING_KEYS.weekStart] = '0';
   DEFAULTS[SETTING_KEYS.dateFormat] = 'medium';
   DEFAULTS[SETTING_KEYS.accent] = '#1f6feb';
-  DEFAULTS[SETTING_KEYS.applyOnSelect] = 'true';
   DEFAULTS[SETTING_KEYS.showPresets] = 'true';
   DEFAULTS[SETTING_KEYS.showDiagnostics] = 'false';
   DEFAULTS[SETTING_KEYS.minDate] = '';
@@ -278,13 +276,6 @@
     });
   }
 
-  function clearRangeAsync(config) {
-    if (!available) return Promise.reject(new Error('Extension is not initialized.'));
-    if (config.targetMode === 'parameters' || !config.fieldName) return Promise.resolve();
-    return Promise.all(worksheetsFor(config.worksheets).map(function (ws) {
-      return ws.clearFilterAsync(config.fieldName).catch(function () { /* no filter to clear */ });
-    }));
-  }
 
   /**
    * Read the filter back out of Tableau so the UI can show what the workbook
@@ -325,9 +316,34 @@
   /* --------------------------------------------------------------- dialog */
 
   function openConfigureDialog(payload) {
+    return openDialog('configure.html', payload, { height: 660, width: 560 });
+  }
+
+  /**
+   * The calendar lives here rather than in the dashboard zone. A dialog is
+   * sized by the extension and painted outside the zone, so the dashboard only
+   * has to find room for the bar.
+   */
+  function openPickerDialog(payload) {
+    return openDialog('picker.html', payload, { height: 360, width: 600 });
+  }
+
+  function openDialog(page, payload, size) {
     if (!available) return Promise.reject(new Error('Extension is not initialized.'));
-    var url = new URL('configure.html', global.location.href).href;
-    return api().ui.displayDialogAsync(url, payload || '', { height: 620, width: 560 });
+    var url = new URL(page, global.location.href).href;
+    return api().ui.displayDialogAsync(url, payload || '', size);
+  }
+
+  /**
+   * True when the user simply closed the dialog rather than something failing.
+   * Tableau signals this with DialogClosedByUser, whose spelling has varied
+   * across API versions, so both forms are matched.
+   */
+  function isDialogDismissal(err) {
+    var code = err && (err.errorCode || err.message);
+    if (!code) return false;
+    var s = String(code).toLowerCase();
+    return s.indexOf('dialog-closed-by-user') >= 0 || s.indexOf('dialogclosedbyuser') >= 0;
   }
 
   function onDashboardResize(handler) {
@@ -354,9 +370,10 @@
     detectFieldTypeAsync: detectFieldTypeAsync,
     resolveEndPolicy: resolveEndPolicy,
     applyRangeAsync: applyRangeAsync,
-    clearRangeAsync: clearRangeAsync,
     readBackAsync: readBackAsync,
     openConfigureDialog: openConfigureDialog,
+    openPickerDialog: openPickerDialog,
+    isDialogDismissal: isDialogDismissal,
     onDashboardResize: onDashboardResize,
     describeError: describeError
   };

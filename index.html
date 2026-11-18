@@ -7,69 +7,35 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <div class="drp-shell" id="shell">
+  <!--
+    Everything the dashboard zone holds. The bar is also the readout of the
+    active range, so the range stays on screen without a separate worksheet.
+    The calendar opens in a Tableau dialog; see picker.html.
+  -->
+  <div class="drp-bar" id="bar">
+    <select class="drp-bar__preset" id="barPreset" aria-label="Quick ranges"></select>
 
-    <div class="drp-header">
-      <span class="drp-title" id="headerTitle">Date range</span>
-      <span class="drp-nights" id="summary"></span>
-    </div>
+    <button class="drp-bar__open" type="button" id="barOpen">
+      <svg class="drp-bar__icon" viewBox="0 0 16 16" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="1.4">
+        <rect x="1.7" y="3" width="12.6" height="11.3" rx="1.6"/>
+        <path d="M1.7 6.6h12.6M5 1.6v2.6M11 1.6v2.6"/>
+      </svg>
+      <span class="drp-bar__range" id="barRange">&mdash;</span>
+      <span class="drp-bar__caret" aria-hidden="true">&#9662;</span>
+    </button>
 
-    <div class="drp-notice drp-notice--error" id="setupNotice" hidden>
-      <p id="setupNoticeText"></p>
-      <p><button class="drp-btn" type="button" id="setupConfigureBtn">Open configuration</button></p>
-    </div>
-
-    <div class="drp-body" id="body">
-      <div class="drp-presets" id="presets" role="group" aria-label="Preset ranges">
-        <span class="drp-presets__heading">Quick ranges</span>
-      </div>
-
-      <div class="drp-main">
-        <div class="drp-fields">
-          <div class="drp-field">
-            <label class="drp-field__label" for="startInput">Start</label>
-            <input class="drp-field__input" id="startInput" type="text" autocomplete="off" spellcheck="false">
-          </div>
-          <span class="drp-field__arrow" aria-hidden="true">&rarr;</span>
-          <div class="drp-field">
-            <label class="drp-field__label" for="endInput">End</label>
-            <input class="drp-field__input" id="endInput" type="text" autocomplete="off" spellcheck="false">
-          </div>
-          <span class="drp-nights" id="dayCount"></span>
-        </div>
-
-        <div id="calendar"></div>
-      </div>
-    </div>
-
-    <div class="drp-diagnostics drp-diagnostics--hidden" id="diagnostics">
-      <dl>
-        <dt>Selected days</dt><dd id="diagDays">&mdash;</dd>
-        <dt>Sent as min</dt><dd id="diagMin">&mdash;</dd>
-        <dt>Sent as max</dt><dd id="diagMax">&mdash;</dd>
-        <dt>End-bound rule</dt><dd id="diagPolicy">&mdash;</dd>
-        <dt>Read back from Tableau</dt><dd id="diagReadback">&mdash;</dd>
-        <dt>Browser timezone</dt><dd id="diagTz">&mdash;</dd>
-      </dl>
-    </div>
-
-    <div class="drp-footer">
-      <span class="drp-status" id="status"></span>
-      <span class="drp-footer__spacer"></span>
-      <button class="drp-btn drp-btn--ghost" type="button" id="clearBtn">Clear</button>
-      <button class="drp-btn drp-btn--primary" type="button" id="applyBtn">Apply</button>
-    </div>
-
+    <span class="drp-bar__status" id="barStatus"></span>
   </div>
 
-  <!--
-    The Tableau Extensions API library. It is not on a public CDN that Tableau
-    guarantees, so it ships inside this folder. See README "Install the library".
-  -->
+  <div class="drp-notice drp-notice--error" id="setupNotice" hidden>
+    <p id="setupNoticeText"></p>
+    <p><button class="drp-btn" type="button" id="setupConfigureBtn">Open configuration</button></p>
+  </div>
+
   <script src="lib/tableau.extensions.1.latest.js"></script>
   <script src="js/dateutil.js"></script>
   <script src="js/presets.js"></script>
-  <script src="js/calendar.js"></script>
   <script src="js/tableau-bridge.js"></script>
   <script src="js/main.js"></script>
 </body>

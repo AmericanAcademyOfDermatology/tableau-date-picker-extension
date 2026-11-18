@@ -68,13 +68,16 @@ data.
 | --- | --- |
 | `daterangepicker.trex` | The manifest for the published GitHub Pages build. Drag this one into a dashboard for real use. |
 | `daterangepicker.local.trex` | The same manifest pointing at `http://localhost:8765/index.html`, for use with `serve.cmd`. Its display name is suffixed *(local)* so the two are distinguishable in a dashboard. |
-| `index.html` | The extension surface. |
+| `index.html` | The dashboard bar. All the extension occupies on a dashboard. |
+| `picker.html` | The calendar, opened in a Tableau dialog from the bar. |
 | `configure.html` | The settings dialog, reached from the extension's *Configure…* menu. |
 | `js/dateutil.js` | Calendar-day arithmetic and the UTC boundary construction. |
 | `js/presets.js` | Named relative ranges (Last 30 days, This quarter, and so on). |
 | `js/calendar.js` | The dual-month range calendar widget. No dependencies. |
+| `js/picker.js` | The range-picking UI, mountable into any container. Knows nothing about Tableau. |
 | `js/tableau-bridge.js` | Every call into the Extensions API, isolated in one file. |
-| `js/main.js` | Controller for the extension surface. |
+| `js/main.js` | Controller for the dashboard bar. |
+| `js/picker-dialog.js` | Thin host that runs the picker inside the Tableau dialog. |
 | `js/configure.js` | Controller for the settings dialog. |
 | `css/styles.css` | Shared stylesheet. |
 | `demo.html` | The same UI with the API stubbed out, for reviewing the interaction without Tableau. |
@@ -277,29 +280,50 @@ Two things to know before choosing this host:
 | **Week starts on** | Sunday or Monday. |
 | **Date display** | How dates are shown in the header and the two text boxes. Typed entry accepts this format, ISO, and month names regardless. |
 | **Default range** | The named range that **When the dashboard opens** refers to. |
-| **When the dashboard opens** | `Apply the default range` re-resolves that preset against today's date every time the dashboard is opened and applies it, so a relative range such as *This month* follows the calendar. `Apply the range last used` restores what was in force when the workbook was saved. `Show the last range but change no filters` displays a range without touching the workbook's filters. The default is `Apply the default range`. |
+| **When the dashboard opens** | `Apply the default range` re-resolves that preset against today's date every time the dashboard is opened and applies it, so a relative range such as *This month* follows the calendar. `Apply the range last used` restores what was in force when the workbook was saved. The default is `Apply the default range`. The picker always applies one of the two; there is no mode that leaves the workbook's filters untouched. |
 | **Earliest / Latest selectable** | Greys out days outside the window and clamps the presets to it. |
 | **Accent colour** | Tints the selected range. |
-| **Apply as soon as the end date is picked** | On by default. Turn it off to show an explicit **Apply** button. |
-| **Show the quick ranges rail** | Hides the preset column to save horizontal space. |
-| **Show the boundary diagnostics panel** | Shows the sent and read-back bounds. Useful while validating, worth turning off for end users. |
+| **Show the quick ranges dropdown on the dashboard bar** | Turn off to shrink the bar to the range button alone. The dropdown is still present inside the picker. |
+| **Show the boundary diagnostics panel in the picker** | Shows the UTC bounds the current selection would send. Useful while validating, worth turning off for end users. The range read back from Tableau is always in the bar's tooltip. |
+
+A range applies the moment it is complete — a second calendar click, a preset
+choice, or Enter in a date field — so there is no **Apply** button. There is no
+**Clear** either: the picker always holds a range.
 
 All settings live in the workbook through `tableau.extensions.settings`, so they
 travel with the `.twb`/`.twbx` and do not need to be reapplied per viewer.
 
 ---
 
-## Sizing the extension object
+## Layout
 
-The layout measures its own zone and adapts:
+A dashboard extension renders inside an iframe pinned to its zone and cannot
+paint outside it, so an inline calendar forces the zone to be as large as the
+calendar. This extension puts only a **bar** in the zone and opens the calendar
+in a Tableau **dialog**, which the extension sizes itself and which is painted
+outside the zone.
 
-* **Wider than 640 px** — two months side by side with the presets rail.
-* **420 to 640 px** — two months, tighter spacing.
-* **Under 420 px** — one month, presets rail hidden.
+The bar is also the readout of the active range. A dashboard therefore does not
+need a separate text worksheet to show people which dates are in force.
 
-The six week rows are sized from the height actually available, so the last week
-of the month is never clipped. A zone of roughly **660 × 400 px** shows
-everything comfortably; **700 × 470 px** if you leave the diagnostics panel on.
+### Sizing the extension object
+
+| Zone size | Result |
+| --- | --- |
+| **320 × 36 px** or wider | Quick-ranges dropdown and range button on one line. Recommended. |
+| **240 × 72 px** | The two stack onto separate lines. |
+| **150 × 36 px** | Range button alone; turn the quick-ranges dropdown off in the configuration. |
+
+The range readout has priority over everything else on the bar, and a range
+inside a single year prints that year once — `Oct 20 – Nov 18, 2026` — so it
+fits a narrow zone without truncating.
+
+### The picker dialog
+
+Opened at 600 × 360. Inside it the calendar sizes its week rows to the space
+available and drops to a single month below 420 px of calendar width. The row
+count follows the months on screen rather than always reserving six, which
+returns a row of height for most month pairs.
 
 ---
 
