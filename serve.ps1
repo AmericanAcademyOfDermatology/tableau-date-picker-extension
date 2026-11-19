@@ -14,6 +14,10 @@
     .\serve.ps1
     Serves http://localhost:8765/index.html until you press Ctrl+C.
 
+    Ctrl+C stops the listener and releases the port. Launched through
+    serve.cmd, cmd.exe adds a "Terminate batch job (Y/N)?" prompt of its own
+    afterwards; the server has already stopped by then.
+
 .NOTES
     If the listener fails with "Access is denied", either run this script from
     an elevated PowerShell window, or grant your account a one-time URL
@@ -91,11 +95,53 @@ Write-Host "  extension : ${prefix}index.html"
 Write-Host "  demo      : ${prefix}demo.html"
 Write-Host "  tests     : ${prefix}tests.html"
 Write-Host "Press Ctrl+C to stop."
+
+# Ctrl+C reaches every process in the console group, so when the serve.cmd
+# launcher is the parent, cmd.exe adds its own "Terminate batch job (Y/N)?"
+# after this script has already stopped. That prompt is cmd's, not the
+# server's, and the port is released before it appears. Say so up front, and
+# only on the path where it actually happens.
+try {
+    $parentId = (Get-CimInstance Win32_Process -Filter "ProcessId = $PID").ParentProcessId
+    if ((Get-Process -Id $parentId -ErrorAction Stop).ProcessName -eq 'cmd') {
+        Write-Host "  cmd will then ask 'Terminate batch job (Y/N)?' - the server has" -ForegroundColor DarkGray
+        Write-Host "  already stopped by that point, so either answer is safe." -ForegroundColor DarkGray
+    }
+}
+catch {
+    # Parent lookup is cosmetic; a failure here must never stop the server.
+}
+
 Write-Host ""
+
+# How long to block before returning to a statement boundary, in milliseconds.
+# Small enough that Ctrl+C feels immediate, large enough to stay idle between
+# requests.
+$slice = 250
+$pending = $null
 
 try {
     while ($listener.IsListening) {
-        $context = $listener.GetContext()
+        # GetContext() blocks in native code until a request arrives, and while
+        # it does, nothing can stop this script: Ctrl+C is acted on at statement
+        # boundaries, and a Register-ObjectEvent handler for CancelKeyPress
+        # would not help either, because PowerShell drains its event queue only
+        # while the pipeline is idle. Waiting on the async overload in short
+        # slices reaches a statement boundary several times a second, so Ctrl+C
+        # lands and the finally block below stops the listener.
+        if ($null -eq $pending) { $pending = $listener.GetContextAsync() }
+
+        try {
+            if (-not $pending.Wait($slice)) { continue }
+        }
+        catch {
+            # Stopping the listener faults the outstanding task; that is a
+            # shutdown, not an error.
+            break
+        }
+
+        $context = $pending.GetAwaiter().GetResult()
+        $pending = $null
         $request = $context.Request
         $response = $context.Response
 
@@ -142,7 +188,14 @@ try {
     }
 }
 finally {
-    $listener.Stop()
-    $listener.Close()
+    # Runs on Ctrl+C as well as on a normal exit, which is what releases the
+    # port. Each step is guarded so a failure in one still lets the rest run.
+    try { $listener.Stop() }  catch { }
+    try { $listener.Close() } catch { }
+    # Stopping faults any outstanding GetContextAsync task. Observing it here
+    # keeps the fault from being raised later as an unobserved task exception.
+    if ($null -ne $pending) {
+        try { $null = $pending.GetAwaiter().GetResult() } catch { }
+    }
     Write-Host "Stopped." -ForegroundColor Green
 }

@@ -123,6 +123,22 @@ changes nothing on the machine. To run the script directly instead:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\serve.ps1"
 ```
 
+#### Stopping it
+
+Ctrl+C stops the server and releases port 8765.
+
+Launched through `serve.cmd`, cmd.exe then adds a prompt of its own:
+
+```
+Stopped.
+Terminate batch job (Y/N)?
+```
+
+`Stopped.` is the server; the prompt is cmd.exe, which receives the same Ctrl+C
+because the signal goes to every process in the console group. The listener has
+already closed and the port is free by the time the prompt appears, so either
+answer is safe. Running `serve.ps1` directly exits cleanly with no prompt.
+
 Both Group Policy scopes are `Undefined` here, so the restriction is a local
 setting rather than a domain policy. Should you prefer a lasting change for
 your own account, `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` takes
