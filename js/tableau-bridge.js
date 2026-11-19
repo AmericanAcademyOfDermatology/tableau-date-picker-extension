@@ -315,8 +315,24 @@
 
   /* --------------------------------------------------------------- dialog */
 
+  /**
+   * The style Tableau should use for a popup. 'modal' is painted as an overlay
+   * inside the viz, so Tableau centres it over the dashboard and no browser
+   * popup permission is needed; the unset default, 'window', is a real browser
+   * window that the browser places wherever it likes — in practice the top
+   * right of the screen. Read off the loaded library rather than hard-coded,
+   * because dialogStyle only exists from API 1.10 (Tableau 2022.4); on an older
+   * build this returns undefined and Tableau keeps its previous behaviour.
+   */
+  function modalStyle() {
+    var styles = global.tableau && global.tableau.DialogStyle;
+    return styles ? styles.Modal : undefined;
+  }
+
   function openConfigureDialog(payload) {
-    return openDialog('configure.html', payload, { height: 660, width: 560 });
+    return openDialog('configure.html', payload, {
+      height: 660, width: 560, dialogStyle: modalStyle()
+    });
   }
 
   /**
@@ -329,13 +345,21 @@
     // come to ~534px wide, and a six-row grid at ~25px per row plus the header
     // and footer comes to ~300px tall. The picker adapts if Tableau's window
     // chrome leaves it less than this.
-    return openDialog('picker.html', payload, { height: 318, width: 540 });
+    return openDialog('picker.html', payload, {
+      height: 318, width: 540, dialogStyle: modalStyle()
+    });
   }
 
-  function openDialog(page, payload, size) {
+  function openDialog(page, payload, options) {
     if (!available) return Promise.reject(new Error('Extension is not initialized.'));
     var url = new URL(page, global.location.href).href;
-    return api().ui.displayDialogAsync(url, payload || '', size);
+    // An undefined dialogStyle is dropped so an older Tableau never sees a key
+    // its parser does not know.
+    var opts = {};
+    Object.keys(options || {}).forEach(function (k) {
+      if (options[k] !== undefined) opts[k] = options[k];
+    });
+    return api().ui.displayDialogAsync(url, payload || '', opts);
   }
 
   /**
