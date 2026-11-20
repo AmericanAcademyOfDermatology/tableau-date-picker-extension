@@ -24,6 +24,8 @@
     dateFormat: 'drp.dateFormat',
     accent: 'drp.accent',
     showPresets: 'drp.showPresets',
+    showTitle: 'drp.showTitle',
+    titleText: 'drp.titleText',             // '' = use the field name
     showDiagnostics: 'drp.showDiagnostics',
     minDate: 'drp.minDate',
     maxDate: 'drp.maxDate',
@@ -46,6 +48,10 @@
   DEFAULTS[SETTING_KEYS.dateFormat] = 'medium';
   DEFAULTS[SETTING_KEYS.accent] = '#1f6feb';
   DEFAULTS[SETTING_KEYS.showPresets] = 'true';
+  // Off by default so a workbook published before the title existed looks
+  // exactly as it did: an absent key must not grow the bar under a viewer.
+  DEFAULTS[SETTING_KEYS.showTitle] = 'false';
+  DEFAULTS[SETTING_KEYS.titleText] = '';
   DEFAULTS[SETTING_KEYS.showDiagnostics] = 'false';
   DEFAULTS[SETTING_KEYS.minDate] = '';
   DEFAULTS[SETTING_KEYS.maxDate] = '';
