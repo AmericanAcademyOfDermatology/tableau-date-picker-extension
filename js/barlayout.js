@@ -49,7 +49,12 @@
    */
   function layoutFor(width, height, opts) {
     var o = opts || {};
-    var title = !!o.showTitle && height >= TITLE_MIN_HEIGHT;
+    // Resolved text, not the switch: a title that renders nothing must not be
+    // charged for. Reserving its 18px would raise the stacking floor, keep a
+    // narrow row on one line and let overflow clip the range readout — which
+    // is exactly what parameters-only mode, where there is no field name to
+    // fall back to, would hit.
+    var title = titleFor(o) !== '' && height >= TITLE_MIN_HEIGHT;
     var needed = title ? STACK_MIN_HEIGHT + TITLE_HEIGHT : STACK_MIN_HEIGHT;
     var stacked = !!o.showPresets && width < STACK_MIN_WIDTH && height >= needed;
     return { title: title, stacked: stacked };

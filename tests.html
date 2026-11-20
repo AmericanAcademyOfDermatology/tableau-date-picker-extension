@@ -189,9 +189,13 @@
   check('no text and no field resolves to empty',
     B.titleFor({ showTitle: true, titleText: '', fieldName: '' }), '');
 
-  check('title shows at 52px', B.layoutFor(400, 52, { showPresets: true, showTitle: true }).title, true);
-  check('title suppressed at 51px', B.layoutFor(400, 51, { showPresets: true, showTitle: true }).title, false);
-  check('title absent when switched off', B.layoutFor(400, 200, { showPresets: true, showTitle: false }).title, false);
+  // fieldName is supplied so these pin the height rule; a case with nothing to
+  // render is covered separately below.
+  var withField = { showPresets: true, showTitle: true, titleText: '', fieldName: 'Order Date' };
+  check('title shows at 52px', B.layoutFor(400, 52, withField).title, true);
+  check('title suppressed at 51px', B.layoutFor(400, 51, withField).title, false);
+  check('title absent when switched off',
+    B.layoutFor(400, 200, { showPresets: true, showTitle: false, fieldName: 'Order Date' }).title, false);
 
   check('stacks at 299px wide and 62px tall without a title',
     B.layoutFor(299, 62, { showPresets: true, showTitle: false }).stacked, true);
@@ -200,11 +204,19 @@
   check('does not stack at 61px tall',
     B.layoutFor(299, 61, { showPresets: true, showTitle: false }).stacked, false);
   check('stacking with a title needs 80px',
-    B.layoutFor(299, 80, { showPresets: true, showTitle: true }).stacked, true);
+    B.layoutFor(299, 80, withField).stacked, true);
   check('does not stack with a title at 79px',
-    B.layoutFor(299, 79, { showPresets: true, showTitle: true }).stacked, false);
+    B.layoutFor(299, 79, withField).stacked, false);
   check('never stacks when the presets are hidden',
-    B.layoutFor(299, 200, { showPresets: false, showTitle: true }).stacked, false);
+    B.layoutFor(299, 200, { showPresets: false, showTitle: true, fieldName: 'Order Date' }).stacked, false);
+
+  // Parameters-only mode has no field name, so the title resolves to nothing
+  // and must claim no height. Reserving 18px for an empty title raises the
+  // stacking floor and clips the range readout instead.
+  check('a title that resolves to nothing claims no height',
+    B.layoutFor(299, 70, { showPresets: true, showTitle: true, titleText: '', fieldName: '' }).title, false);
+  check('a title that resolves to nothing does not block stacking',
+    B.layoutFor(299, 70, { showPresets: true, showTitle: true, titleText: '', fieldName: '' }).stacked, true);
 
   check('showTitle defaults to false for older workbooks',
     window.DRP.tableau.DEFAULTS['drp.showTitle'], 'false');
