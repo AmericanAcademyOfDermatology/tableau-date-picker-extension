@@ -54,14 +54,43 @@ button:disabled { cursor: default; }
    the active range, which is why it is never collapsed to an icon.
    ========================================================================= */
 
+/* A column, so the optional title always sits above the controls. Only the
+   row inside it stacks; keeping those two jobs in separate elements is what
+   guarantees the title stays on top in both layouts. */
 .drp-bar {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
   height: 100%;
   min-height: 0;
   padding: 4px 6px;
   overflow: hidden;
+}
+
+/* 11px rather than the range's 12px: it labels the readout, and must never
+   compete with it for attention or for room. */
+.drp-bar__title {
+  flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  color: var(--drp-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Same reason as .drp-bar__status:empty — an element with nothing to say
+   claims no height, so a workbook with no field name keeps its old size. */
+.drp-bar__title:empty { display: none; }
+
+.drp-bar__row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
 }
 
 .drp-bar__preset {
@@ -130,14 +159,15 @@ button:disabled { cursor: default; }
   font-weight: 600;
 }
 
-/* Stack onto two lines in a zone too narrow for one. */
-.drp-bar--stacked {
+/* Stack onto two lines in a zone too narrow for one. Applied to the row, not
+   the bar, so the title above it is unaffected. */
+.drp-bar__row--stacked {
   flex-direction: column;
   align-items: stretch;
   gap: 4px;
 }
 
-.drp-bar--stacked .drp-bar__preset { max-width: none; }
+.drp-bar__row--stacked .drp-bar__preset { max-width: none; }
 
 .drp-bar__status {
   flex: 0 1 auto;

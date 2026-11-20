@@ -21,6 +21,7 @@
   var D = global.DRP.date;
   var Presets = global.DRP.presets;
   var Bridge = global.DRP.tableau;
+  var Layout = global.DRP.barlayout;
   var K = Bridge.KEYS;
 
   var dom = {};
@@ -61,7 +62,7 @@
   });
 
   function cacheDom() {
-    ['bar', 'barPreset', 'barOpen', 'barRange', 'barStatus',
+    ['bar', 'barTitle', 'barRow', 'barPreset', 'barOpen', 'barRange', 'barStatus',
      'setupNotice', 'setupNoticeText', 'setupConfigureBtn'
     ].forEach(function (id) { dom[id] = document.getElementById(id); });
   }
@@ -95,6 +96,8 @@
       dateFormat: raw[K.dateFormat] || 'medium',
       accent: raw[K.accent] || '#1f6feb',
       showPresets: raw[K.showPresets] !== 'false',
+      showTitle: raw[K.showTitle] === 'true',
+      titleText: raw[K.titleText] || '',
       showDiagnostics: raw[K.showDiagnostics] === 'true',
       minDate: D.fromISO(raw[K.minDate] || ''),
       maxDate: D.fromISO(raw[K.maxDate] || ''),
@@ -200,6 +203,10 @@
       dom.barRange.textContent = 'Select a date range';
       dom.barPreset.value = '';
     }
+
+    // textContent, never innerHTML: a title is author-typed text and must
+    // appear literally, markup characters included.
+    dom.barTitle.textContent = Layout.titleFor(config);
 
     dom.barOpen.title = describeTooltip();
   }
@@ -427,10 +434,11 @@
     var width = Math.round(rect.width) || document.documentElement.clientWidth;
     var height = Math.round(rect.height) || document.documentElement.clientHeight;
 
-    // Two controls on one line need roughly 300px. Below that, stack them,
-    // which a tall-but-narrow zone can still accommodate.
-    var stack = config.showPresets && width < 300 && height >= 62;
-    dom.bar.classList.toggle('drp-bar--stacked', stack);
+    // The thresholds themselves live in barlayout.js, where tests.html can
+    // reach them.
+    var fit = Layout.layoutFor(width, height, config);
+    dom.barTitle.hidden = !fit.title;
+    dom.barRow.classList.toggle('drp-bar__row--stacked', fit.stacked);
   }
 
   /* ------------------------------------------------------------ configure */

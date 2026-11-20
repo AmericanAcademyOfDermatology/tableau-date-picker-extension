@@ -65,11 +65,14 @@
     <div class="demo-label">Dashboard zone</div>
     <div class="demo-zone">
       <div class="drp-bar" id="bar">
-        <select class="drp-bar__preset" id="barPreset" aria-label="Quick ranges"></select>
-        <button class="drp-bar__open" type="button" id="barOpen">
-          <span class="drp-bar__range" id="barRange">&mdash;</span>
-        </button>
-        <span class="drp-bar__status" id="barStatus"></span>
+        <span class="drp-bar__title" id="barTitle"></span>
+        <div class="drp-bar__row" id="barRow">
+          <select class="drp-bar__preset" id="barPreset" aria-label="Quick ranges"></select>
+          <button class="drp-bar__open" type="button" id="barOpen">
+            <span class="drp-bar__range" id="barRange">&mdash;</span>
+          </button>
+          <span class="drp-bar__status" id="barStatus"></span>
+        </div>
       </div>
     </div>
 
@@ -144,6 +147,7 @@
   <script src="js/presets.js"></script>
   <script src="js/calendar.js"></script>
   <script src="js/picker.js"></script>
+  <script src="js/barlayout.js"></script>
   <script src="js/tableau-bridge.js"></script>
   <script src="js/main.js"></script>
 </body>
