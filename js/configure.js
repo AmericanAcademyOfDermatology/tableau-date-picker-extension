@@ -41,7 +41,7 @@
     ['targetMode', 'fieldName', 'fieldHint', 'worksheets', 'startParam', 'endParam',
      'endPolicy', 'nullOption', 'weekStart', 'dateFormat', 'defaultPreset',
      'onLoad', 'onLoadHint',
-     'minDate', 'maxDate', 'accent', 'showPresets',
+     'minDate', 'maxDate', 'accent', 'showPresets', 'showTitle', 'titleText',
      'showDiagnostics', 'saveBtn', 'cancelBtn', 'dialogStatus', 'policyCallout'
     ].forEach(function (id) { dom[id] = document.getElementById(id); });
   }
@@ -127,7 +127,10 @@
     dom.maxDate.value = saved[K.maxDate] || '';
     dom.accent.value = saved[K.accent] || '#1f6feb';
     dom.showPresets.checked = saved[K.showPresets] !== 'false';
+    dom.showTitle.checked = saved[K.showTitle] === 'true';
+    dom.titleText.value = saved[K.titleText] || '';
     dom.showDiagnostics.checked = saved[K.showDiagnostics] === 'true';
+    refreshTitlePlaceholder();
 
     var chosen = {};
     try {
@@ -154,6 +157,7 @@
     dom.onLoad.addEventListener('change', refreshOnLoadHint);
     dom.defaultPreset.addEventListener('change', refreshOnLoadHint);
     dom.fieldName.addEventListener('change', refreshPolicyCallout);
+    dom.fieldName.addEventListener('change', refreshTitlePlaceholder);
     dom.endPolicy.addEventListener('change', refreshPolicyCallout);
     dom.saveBtn.addEventListener('click', save);
     dom.cancelBtn.addEventListener('click', function () {
@@ -232,6 +236,16 @@
       'the end date cannot appear.';
   }
 
+  /**
+   * The field name appears only as placeholder text, never as the input's
+   * value. That is what makes "blank" mean "track the field": a pre-filled
+   * value would be a literal copy, and would quietly go stale the moment the
+   * selected field changed.
+   */
+  function refreshTitlePlaceholder() {
+    dom.titleText.placeholder = dom.fieldName.value || 'Date field';
+  }
+
   /* ----------------------------------------------------------------- save */
 
   function save() {
@@ -279,6 +293,10 @@
     patch[K.maxDate] = dom.maxDate.value || '';
     patch[K.accent] = dom.accent.value;
     patch[K.showPresets] = dom.showPresets.checked ? 'true' : 'false';
+    patch[K.showTitle] = dom.showTitle.checked ? 'true' : 'false';
+    // Trimmed, so a box containing only spaces stores '' and keeps tracking
+    // the field rather than rendering a blank title.
+    patch[K.titleText] = dom.titleText.value.trim();
     patch[K.showDiagnostics] = dom.showDiagnostics.checked ? 'true' : 'false';
 
     setStatus('Saving…');
